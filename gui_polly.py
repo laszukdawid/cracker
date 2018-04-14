@@ -1,14 +1,14 @@
 #!/usr/bin/python
 # coding: UTF-8
 import json
-import sys, os, re
+import sys
 
-import boto3
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QMainWindow, QApplication, QAction
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit, QComboBox
 
-from ssml import SSML
+from text_parser import TextParser
+from polly_connector import PollyConnector
 
 class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
@@ -33,7 +33,8 @@ class MainWindow(QMainWindow):
         self.setWidgets()
         self.initValues()
 
-        self.initPolly()
+        self.textParser = TextParser()
+        self.polly = PollyConnector()
 
     def loadLanguages(self):
         """Load JSON config with available languages and voices."""
@@ -42,14 +43,6 @@ class MainWindow(QMainWindow):
         self.voices = lang_map["Languages"]
         self.languages = list(self.voices.keys())
         self.lang_voices = self.voices[self.default_language]
-
-    def initPolly(self):
-        self.client = boto3.client('polly')
-        self.speech = dict(
-            OutputFormat="mp3",
-            VoiceId=self.default_voice,
-            TextType="ssml",
-        )
 
     def setAction(self):
         _exit = QAction('Exit', self)
@@ -194,67 +187,29 @@ class MainWindow(QMainWindow):
         if self.default_voice in voices:
             voice = self.default_voice
             self.voiceW.setCurrentIndex(voices.index(self.default_voice))
-        self.speech["VoiceId"] = voice
+        self.voice = voice
 
     def changeVoice(self, voice):
         self.voice = voice
-        self.speech["VoiceId"] = voice
-
-    def reduceCite(self):
-        """Removes citations from pasted text."""
-        text = self.textEdit.toPlainText()
-        text = re.sub(r'\w+ and \w+, \d{4}(;?)', '', text)
-        text = re.sub(r'\w+ et al., \d\{4}(;?)', '', text)
-        text = re.sub(r'\w+, \d{4}(;?)', '', text)
-        text = re.sub(r'\(;[^\)]*\)', '', text)
-        text = re.sub(r'\(( *)\)', '', text)
-        self.textEdit.setText(text)
 
     def reduceText(self):
-        """Simplify text to strings only."""
         text = self.textEdit.toPlainText()
-        text = re.sub(r'-\n', '', text, re.U)
-        text = re.sub(r'- ', '', text, re.U)
-        text = re.sub(r"'", '', text)
-        text = re.sub(r'\t', ' ', text)
-        text = re.sub(r'\n', ' ', text)
+        new_text = self.textParser.reduceText(text)
         self.textEdit.setText(text)
 
-    def wikiText(self):
-        """Convert direct copy from Wikipedia into human-readable form."""
-        print('wiki pressed')
-
-        text = str(self.textEdit.toPlainText())
-        text = re.sub(r'\[+[0-9]+\]', '', text)
-        text = text.replace("[clarification needed]", '')
-        text = text.replace("[citation needed]", '')
-
+    def reduceCite(self):
+        text = self.textEdit.toPlainText()
+        new_text = self.textParser.reduceCite(text)
         self.textEdit.setText(text)
 
     def readText(self):
-        """Reads out text."""
         text = self.textEdit.toPlainText()
-        text = text.translate(dict.fromkeys(range(8)))
-        text = re.sub(r'\n', ' ', text)
-        text = re.sub(r'&', 'and', text)
+        self.polly.readText(text, self.voice, self.rate, self.volume_text)
 
-        ssml = SSML(text, rate=self.rate, volume=self.volume_text)
-        self.speech["Text"] = str(ssml)
-        response = self.client.synthesize_speech(**self.speech)
-        filepath = self.saveMp3(response)
-        self.playFile(filepath)
-
-    def saveMp3(self, response):
-        """Stores downloaded response as an mp3."""
-        mp3 = response["AudioStream"].read()
-        filename = "tmp.mp3"
-        with open(filename, 'wb') as tmp_file:
-            tmp_file.write(mp3)
-        return filename
-
-    def playFile(self, filepath):
-        """Plays mp3 file using UNIX cmd."""
-        os.system("mpg123 "+filepath)
+    def wikiText(self):
+        text = self.textEdit.toPlainText()
+        text = self.textParser.wikiText(text)
+        self.textEdit.setText(text)
 
 
 if __name__ == "__main__":
@@ -262,3 +217,4 @@ if __name__ == "__main__":
     main = MainWindow()
     main.show()
     sys.exit(app.exec_())
+
