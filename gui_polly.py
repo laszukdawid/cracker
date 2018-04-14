@@ -1,48 +1,24 @@
 #!/usr/bin/python
 # coding: UTF-8
+import json
 import sys, os, re
-from PyQt5 import QtCore
-from PyQt5.QtWidgets import QMainWindow, QApplication, QAction, QComboBox
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit
-
-from PyQt5 import QtMultimedia
 
 import boto3
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import QMainWindow, QApplication, QAction
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit, QComboBox
 
-class SSML:
-    """Converts text to annotated SSML form."""
-
-    def __init__(self, text=None, rate=None, volume=None):
-        self._rate = rate
-        self._volume = volume
-        if text is not None:
-            self.text(text)
-
-    def text(self, text):
-        self._text = text
-        self.ssml = text
-        if self._rate is not None or self._volume is not None:
-            _prosody = ["prosody"]
-            if self._rate is not None:
-                _prosody.append('rate="{rate}"'.format(rate=self._rate))
-            if self._volume is not None:
-                _prosody.append('volume="{volume}"'.format(volume=self._volume))
-            prosody = "<" + ' '.join(_prosody) + ">"
-            self.ssml = prosody + self.ssml + "</prosody>"
-
-    def __str__(self):
-        return "<speak>{ssml}</speak>".format(ssml=self.ssml)
-
+from ssml import SSML
 
 class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
 
+    language_file = "voices.json"
     default_voice = "Joanna"
+    default_language = "English"
 
-    ENGLISH_VOICES = ["Sali", "Kimberly", "Kendra", "Joanna", "Ivy", "Matthew", "Justin", "Joey"]
     RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
-
 
     def __init__(self):
         super().__init__()
@@ -52,11 +28,20 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(QtCore.QSize(500, 150))
         self.setMaximumSize(QtCore.QSize(700, 500))
 
+        self.loadLanguages()
         self.setAction()
         self.setWidgets()
         self.initValues()
 
         self.initPolly()
+
+    def loadLanguages(self):
+        """Load JSON config with available languages and voices."""
+        with open(self.language_file) as json_file:
+            lang_map = json.loads(json_file.read())
+        self.voices = lang_map["Languages"]
+        self.languages = list(self.voices.keys())
+        self.lang_voices = self.voices[self.default_language]
 
     def initPolly(self):
         self.client = boto3.client('polly')
@@ -64,7 +49,7 @@ class MainWindow(QMainWindow):
             OutputFormat="mp3",
             VoiceId=self.default_voice,
             TextType="ssml",
-            )
+        )
 
     def setAction(self):
         _exit = QAction('Exit', self)
@@ -117,7 +102,6 @@ class MainWindow(QMainWindow):
         toolbarPaper = self.addToolBar('Paper')
         toolbarPaper.addAction(_paper)
 
-
     def setWidgets(self):
         self.mainWidget = QWidget(self)
         self.setCentralWidget(self.mainWidget)
@@ -149,22 +133,37 @@ class MainWindow(QMainWindow):
         self.volumeW.setGeometry(360, 27, 100, 30)
         self.volumeW.valueChanged.connect(self.changeVolume)
 
+        # Voice language label widget
+        self.langLabel = QLabel("Language:")
+        self.langLabel.setGeometry(380, 27, 20, 20)
+
+        # Voice language widget
+        self.langW = QComboBox(self)
+        self.langW.addItems(self.languages)
+        self.langW.setCurrentIndex(self.languages.index(self.default_language))
+        self.langW.setGeometry(400, 27, 20, 20)
+        self.langW.currentTextChanged.connect(self.changeLanguage)
+
+        # Voice id label widget
         self.voiceLabel = QLabel("Voice:")
         self.voiceLabel.setGeometry(380, 27, 20, 20)
 
+        # Voice id widget
         self.voiceW = QComboBox(self)
-        self.voiceW.addItems(self.ENGLISH_VOICES)
-        self.voiceW.setCurrentIndex(self.ENGLISH_VOICES.index(self.default_voice))
+        self.voiceW.addItems(self.lang_voices)
+        self.voiceW.setCurrentIndex(self.lang_voices.index(self.default_voice))
         self.voiceW.setGeometry(400, 27, 20, 20)
         self.voiceW.currentTextChanged.connect(self.changeVoice)
-        #self.connect(self.voiceW, QtCore.SIGNAL('valueChanged(int)'), self.changeVoice)
 
+        # Adding all widgets to the layout
         self.menuLayout.addWidget(self.speedLabel)
         self.menuLayout.addWidget(self.speedW)
-        self.menuLayout.addWidget(self.volumeLabel)
-        self.menuLayout.addWidget(self.volumeW)
+        self.menuLayout.addWidget(self.langLabel)
+        self.menuLayout.addWidget(self.langW)
         self.menuLayout.addWidget(self.voiceLabel)
         self.menuLayout.addWidget(self.voiceW)
+        self.menuLayout.addWidget(self.volumeLabel)
+        self.menuLayout.addWidget(self.volumeW)
 
         self.layout.addLayout(self.menuLayout)
 
@@ -184,6 +183,18 @@ class MainWindow(QMainWindow):
     def changeSpeed(self, speed):
         self.speed = speed
         self.rate = self.RATES[speed-1]
+
+    def changeLanguage(self, language):
+        self.language = language
+        voices = self.voices[language]
+        self.voiceW.clear()
+        self.voiceW.addItems(voices)
+
+        voice = voices[0]
+        if self.default_voice in voices:
+            voice = self.default_voice
+            self.voiceW.setCurrentIndex(voices.index(self.default_voice))
+        self.speech["VoiceId"] = voice
 
     def changeVoice(self, voice):
         self.voice = voice
