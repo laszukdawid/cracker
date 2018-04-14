@@ -21,7 +21,7 @@ class SSML:
     def text(self, text):
         self._text = text
         self.ssml = text
-        if self._rate or self._volume:
+        if self._rate is not None or self._volume is not None:
             _prosody = ["prosody"]
             if self._rate is not None:
                 _prosody.append('rate="{rate}"'.format(rate=self._rate))
@@ -42,6 +42,7 @@ class MainWindow(QMainWindow):
     ENGLISH_VOICES = ["Sali", "Kimberly", "Kendra", "Joanna", "Ivy", "Matthew", "Justin", "Joey"]
     RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
+
 
     def __init__(self):
         super().__init__()
@@ -69,7 +70,7 @@ class MainWindow(QMainWindow):
         _exit = QAction('Exit', self)
         _exit.setShortcut('Ctrl+Q')
         _exit.setStatusTip('Exit application')
-        #_exit.triggered.connect(QtCore.SLOT('close()'))
+        _exit.triggered.connect(self.close)
 
         _read = QAction('Read', self)
         _read.setShortcut('Ctrl+Shift+Space')
@@ -189,9 +190,8 @@ class MainWindow(QMainWindow):
         self.speech["VoiceId"] = voice
 
     def reduceCite(self):
-        print('cite')
-
-        text = str(self.textEdit.toPlainText())
+        """Removes citations from pasted text."""
+        text = self.textEdit.toPlainText()
         text = re.sub(r'\w+ and \w+, \d{4}(;?)', '', text)
         text = re.sub(r'\w+ et al., \d\{4}(;?)', '', text)
         text = re.sub(r'\w+, \d{4}(;?)', '', text)
@@ -200,18 +200,17 @@ class MainWindow(QMainWindow):
         self.textEdit.setText(text)
 
     def reduceText(self):
-        print('key pressed')
-
-        text = str(self.textEdit.toPlainText())
+        """Simplify text to strings only."""
+        text = self.textEdit.toPlainText()
         text = re.sub(r'-\n', '', text, re.U)
         text = re.sub(r'- ', '', text, re.U)
-        #~ text = re.sub(r'\c', '', text)
         text = re.sub(r"'", '', text)
         text = re.sub(r'\t', ' ', text)
         text = re.sub(r'\n', ' ', text)
         self.textEdit.setText(text)
 
     def wikiText(self):
+        """Convert direct copy from Wikipedia into human-readable form."""
         print('wiki pressed')
 
         text = str(self.textEdit.toPlainText())
@@ -222,41 +221,29 @@ class MainWindow(QMainWindow):
         self.textEdit.setText(text)
 
     def readText(self):
-        print("read text")
-
-        text = str(self.textEdit.toPlainText())
+        """Reads out text."""
+        text = self.textEdit.toPlainText()
+        text = text.translate(dict.fromkeys(range(8)))
         text = re.sub(r'\n', ' ', text)
-        text = re.sub(r"'", '', text)
-        text.replace("'", "")
+        text = re.sub(r'&', 'and', text)
 
         ssml = SSML(text, rate=self.rate, volume=self.volume_text)
         self.speech["Text"] = str(ssml)
         response = self.client.synthesize_speech(**self.speech)
         filepath = self.saveMp3(response)
         self.playFile(filepath)
-        #self.playResponse(response)
-
-        self.speech["Text"] = ""
 
     def saveMp3(self, response):
+        """Stores downloaded response as an mp3."""
         mp3 = response["AudioStream"].read()
         filename = "tmp.mp3"
-        with open(filename, 'wb') as f:
-            f.write(mp3)
+        with open(filename, 'wb') as tmp_file:
+            tmp_file.write(mp3)
         return filename
 
     def playFile(self, filepath):
+        """Plays mp3 file using UNIX cmd."""
         os.system("mpg123 "+filepath)
-
-    def playResponse(self, response):
-        url = QtCore.QUrl.fromLocalFile(filename)
-        media = QtMultimedia.QMediaContent(url)
-        playlist = QtMultimedia.QMediaPlaylist()
-        playlist.addMedia(media)
-
-        player = QtMultimedia.QMediaPlayer()
-        player.setPlaylist(playlist)
-        player.play()
 
 
 if __name__ == "__main__":
