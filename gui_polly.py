@@ -8,7 +8,8 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QAction
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit, QComboBox
 
 from text_parser import TextParser
-from polly_connector import PollyConnector
+from speaker.polly import Polly
+from speaker.espeak import Espeak
 
 class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
@@ -34,7 +35,9 @@ class MainWindow(QMainWindow):
         self.initValues()
 
         self.textParser = TextParser()
-        self.polly = PollyConnector()
+        self.speaker = Polly()
+        # TODO: Allow to select speaker
+        #self.speaker = Espeak()
 
     def loadLanguages(self):
         """Load JSON config with available languages and voices."""
@@ -204,7 +207,7 @@ class MainWindow(QMainWindow):
 
     def readText(self):
         text = self.textEdit.toPlainText()
-        self.polly.readText(text, self.voice, self.rate, self.volume_text)
+        self.speaker.read_text(text, self.voice, self.rate, self.volume_text)
 
     def wikiText(self):
         text = self.textEdit.toPlainText()
