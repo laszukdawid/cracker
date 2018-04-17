@@ -1,10 +1,11 @@
 import os
 import re
+import subprocess
 
 import logging
 import boto3
 
-from ssml import SSML
+from aws_polly_gui.ssml import SSML
 from .abstract_speaker import AbstractSpeaker
 
 
@@ -14,7 +15,7 @@ class Polly(AbstractSpeaker):
 
     def __init__(self):
         self.client = boto3.client('polly')
-        self._cached_text = ""
+        self._cached_ssml = SSML()
         self._cached_filepath = ""
 
     @staticmethod
@@ -29,15 +30,13 @@ class Polly(AbstractSpeaker):
         text = self.clean_text(text)
         ssml = SSML(text, rate=rate, volume=volume_text)
 
-        if self._cached_text == text:
+        if self._cached_ssml == ssml:
             self._logger.debug("Playing cached file")
-            print("Playing cached file")
             filepath = self._cached_filepath
         else:
-            self._logger.debug("Request from Polly")
-            print("Request from polly")
+            self._logger.debug("Re_cached_textquest from Polly")
             filepath = self.ask_polly(str(ssml), voiceid)
-            self._cached_text, self._cached_filepath = text, filepath
+            self._cached_ssml, self._cached_filepath = ssml, filepath
         self.play_file(filepath)
 
     def ask_polly(self, ssml_text, voiceid):
@@ -67,5 +66,5 @@ class Polly(AbstractSpeaker):
     @staticmethod
     def play_file(filepath):
         """Plays mp3 file using UNIX cmd."""
-        os.system("mpg123 "+filepath)
+        subprocess.call(["mpg123", filepath])
 
