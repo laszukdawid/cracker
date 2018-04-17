@@ -1,14 +1,13 @@
 #!/usr/bin/python
 # coding: UTF-8
 import json
-import sys
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QMainWindow, QApplication, QAction
+from PyQt5.QtWidgets import QMainWindow, QAction
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit, QComboBox
 
-from text_parser import TextParser
-from speaker.polly import Polly
+from aws_polly_gui.text_parser import TextParser
+from aws_polly_gui.speaker.polly import Polly
 # from speaker.espeak import Espeak
 
 
@@ -216,9 +215,4 @@ class MainWindow(QMainWindow):
         self.textEdit.setText(text)
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    main = MainWindow()
-    main.show()
-    sys.exit(app.exec_())
 

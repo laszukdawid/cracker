@@ -3,6 +3,7 @@ class SSML:
     """Converts text to annotated SSML form."""
 
     def __init__(self, text=None, rate=None, volume=None):
+        self.ssml = ''
         self._rate = rate
         self._volume = volume
         if text is not None:
@@ -22,4 +23,10 @@ class SSML:
     def __str__(self):
         return "<speak>{ssml}</speak>".format(ssml=self.ssml)
 
+    def __hash__(self):
+        return hash(self.ssml)
+
+    def __eq__(self, other):
+        print(other)
+        return self.ssml == other.ssml
 

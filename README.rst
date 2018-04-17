@@ -23,3 +23,7 @@ Since this is a GUI on top of `AWS Polly <https://aws.amazon.com/polly/>`_ it is
 
 Currently reading out is performed by downloading mp3 format of the request and then using `mpg123` to play it. This isn't optimal and should be changed, but, for now, it works.
 
+Suggested execution command
+
+    $ cd aws-polly-gui
+    $ python -m aws_polly_gui.main
