@@ -9,7 +9,6 @@ class SSML:
             self.text(text)
 
     def text(self, text):
-        self._text = text
         self.ssml = text
         if self._rate is not None or self._volume is not None:
             _prosody = ["prosody"]

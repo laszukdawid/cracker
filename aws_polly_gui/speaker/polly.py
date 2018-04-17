@@ -1,21 +1,24 @@
 import os
 import re
 
+import logging
 import boto3
 
 from ssml import SSML
 from .abstract_speaker import AbstractSpeaker
 
+
 class Polly(AbstractSpeaker):
+
+    _logger = logging.getLogger(__name__)
 
     def __init__(self):
         self.client = boto3.client('polly')
-        self.speech = dict(
-            OutputFormat="mp3",
-            TextType="ssml",
-        )
+        self._cached_text = ""
+        self._cached_filepath = ""
 
-    def clean_text(self, text):
+    @staticmethod
+    def clean_text(text):
         text = text.translate(dict.fromkeys(range(8)))
         text = re.sub(r'\n', ' ', text)
         text = re.sub(r'&', 'and', text)
@@ -25,15 +28,35 @@ class Polly(AbstractSpeaker):
         """Reads out text."""
         text = self.clean_text(text)
         ssml = SSML(text, rate=rate, volume=volume_text)
-        self.speech["Text"] = str(ssml)
-        self.speech["VoiceId"] = voiceid
-        response = self.client.synthesize_speech(**self.speech)
-        filepath = self.saveMp3(response)
-        self.playFile(filepath)
 
+        if self._cached_text == text:
+            self._logger.debug("Playing cached file")
+            print("Playing cached file")
+            filepath = self._cached_filepath
+        else:
+            self._logger.debug("Request from Polly")
+            print("Request from polly")
+            filepath = self.ask_polly(str(ssml), voiceid)
+            self._cached_text, self._cached_filepath = text, filepath
+        self.play_file(filepath)
+
+    def ask_polly(self, ssml_text, voiceid):
+        speech = self.create_speech(ssml_text, voiceid)
+        response = self.client.synthesize_speech(**speech)
+        filepath = self.save_mp3(response)
+        return filepath
+
+    @staticmethod
+    def create_speech(ssml_text, voiceid):
+        return dict(
+            OutputFormat='mp3',
+            TextType='ssml',
+            Text=ssml_text,
+            VoiceId=voiceid
+        )
 
     @classmethod
-    def saveMp3(cls, response):
+    def save_mp3(cls, response):
         """Stores downloaded response as an mp3."""
         mp3 = response["AudioStream"].read()
         filename = "tmp.mp3"
@@ -42,7 +65,7 @@ class Polly(AbstractSpeaker):
         return filename
 
     @staticmethod
-    def playFile(filepath):
+    def play_file(filepath):
         """Plays mp3 file using UNIX cmd."""
         os.system("mpg123 "+filepath)
 
