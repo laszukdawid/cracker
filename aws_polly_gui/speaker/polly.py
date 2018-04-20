@@ -34,7 +34,8 @@ class Polly(AbstractSpeaker):
             self._logger.debug("Re_cached_textquest from Polly")
             filepath = self.ask_polly(str(ssml), voiceid)
             self._cached_ssml, self._cached_filepath = ssml, filepath
-        self.play_file(filepath)
+        pid = self.play_file(filepath)
+        return pid
 
     def ask_polly(self, ssml_text, voiceid):
         speech = self.create_speech(ssml_text, voiceid)
@@ -62,6 +63,7 @@ class Polly(AbstractSpeaker):
 
     @staticmethod
     def play_file(filepath):
-        """Plays mp3 file using UNIX cmd."""
-        subprocess.call(["mpg123", filepath])
+        """Plays mp3 file using UNIX cmd. Returns pid to the process."""
+        pid = subprocess.Popen(["mpg123", filepath]).pid
+        return pid
 
