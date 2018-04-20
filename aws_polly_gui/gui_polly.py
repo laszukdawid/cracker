@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # coding: UTF-8
 import json
+import os
+import signal
 
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
@@ -36,6 +38,8 @@ class MainWindow(QMainWindow):
         self.set_action()
         self.set_widgets()
         self.init_values()
+
+        self._last_pid = None
 
     def load_languages(self):
         """Load JSON config with available languages and voices."""
@@ -240,11 +244,16 @@ class MainWindow(QMainWindow):
         text = self.textParser.wiki_text(text)
         self.textEdit.setText(text)
 
+    def stop_process(self, pid):
+        os.kill(pid, signal.SIGTERM)
+
     def read_text(self):
         """Reads out text in the text_box with selected speaker."""
+        if self._last_pid is not None:
+            self.stop_process(self._last_pid)
         text = self.textEdit.toPlainText()
         speaker_config = self._prepare_config()
-        self.speaker.read_text(text, **speaker_config)
+        self._last_pid = self.speaker.read_text(text, **speaker_config)
 
     def _prepare_config(self):
         config = dict( rate=self.rate, volume=self.volume)

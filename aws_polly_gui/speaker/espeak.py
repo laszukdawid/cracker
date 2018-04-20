@@ -23,7 +23,8 @@ class Espeak(AbstractSpeaker):
         command = ["espeak"]
         command += self._process_config(**config)
         command.append(self.clean_text(text))
-        subprocess.call(command)
+        pid = subprocess.Popen(command).pid
+        return pid
 
     @staticmethod
     def _process_config(**config):
