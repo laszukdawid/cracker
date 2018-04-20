@@ -10,14 +10,21 @@ class Polly(AbstractSpeaker):
 
     _logger = logging.getLogger(__name__)
 
+    RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
+    VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
+
     def __init__(self):
         self.client = boto3.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
 
-    def read_text(self, text, voiceid, rate, volume_text):
+    def read_text(self, text, **config):
         """Reads out text."""
         text = self.clean_text(text)
+
+        voiceid = config['voiceid'] if 'voiceid' in config else None
+        rate = config['rate'] if 'rate' in config else None
+        volume_text = config['volume_text'] if 'volume_text' in config else None
         ssml = SSML(text, rate=rate, volume=volume_text)
 
         if self._cached_ssml == ssml:
