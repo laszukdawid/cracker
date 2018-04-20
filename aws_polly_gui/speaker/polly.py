@@ -1,8 +1,5 @@
-import os
-import re
-import subprocess
-
 import logging
+import subprocess
 import boto3
 
 from aws_polly_gui.ssml import SSML
@@ -17,13 +14,6 @@ class Polly(AbstractSpeaker):
         self.client = boto3.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
-
-    @staticmethod
-    def clean_text(text):
-        text = text.translate(dict.fromkeys(range(8)))
-        text = re.sub(r'\n', ' ', text)
-        text = re.sub(r'&', 'and', text)
-        return text
 
     def read_text(self, text, voiceid, rate, volume_text):
         """Reads out text."""

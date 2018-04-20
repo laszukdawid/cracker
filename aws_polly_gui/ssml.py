@@ -27,6 +27,4 @@ class SSML:
         return hash(self.ssml)
 
     def __eq__(self, other):
-        print(other)
         return self.ssml == other.ssml
-
