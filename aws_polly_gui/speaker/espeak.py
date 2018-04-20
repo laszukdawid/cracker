@@ -1,15 +1,17 @@
-import os
+import logging
+import subprocess
 
-from ssml import SSML
 from .abstract_speaker import AbstractSpeaker
+
 
 class Espeak(AbstractSpeaker):
     """
     Uses Unix `espeak` command line interfrace.
     """
 
-    def read_text(self, text, voiceid, rate, volume_text):
-        ssml = SSML(text, rate=rate, volume=volume_text)
+    _logger = logging.getLogger(__name__)
 
-        os.system("espeak '{text}'".format(text=text))
+    def read_text(self, text, voiceid, rate, volume_text):
+        text = self.clean_text(text)
+        subprocess.call(["espeak", text])
 

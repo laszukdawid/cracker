@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox,
 
 from aws_polly_gui.text_parser import TextParser
 from aws_polly_gui.speaker.polly import Polly
-# from speaker.espeak import Espeak
+from aws_polly_gui.speaker.espeak import Espeak
 
 
 class MainWindow(QMainWindow):
@@ -17,17 +17,20 @@ class MainWindow(QMainWindow):
     language_file = "voices.json"
     default_voice = "Joanna"
     default_language = "English"
+    default_speaker = "polly"
 
     RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
 
+    SPEAKER = {"polly": Polly, "espeak": Espeak}
+
     def __init__(self):
         super().__init__()
 
-        self.resize(600, 250)
+        self.resize(800, 250)
         self.setWindowTitle('Simple GUI')
-        self.setMinimumSize(QtCore.QSize(500, 150))
-        self.setMaximumSize(QtCore.QSize(700, 500))
+        self.setMinimumSize(QtCore.QSize(700, 150))
+        self.setMaximumSize(QtCore.QSize(1000, 500))
 
         self.load_languages()
         self.setAction()
@@ -35,9 +38,7 @@ class MainWindow(QMainWindow):
         self.initValues()
 
         self.textParser = TextParser()
-        self.speaker = Polly()
-        # TODO: Allow to select speaker
-        # self.speaker = Espeak()
+        self.speaker = self.SPEAKER[self.default_speaker]()
 
     def load_languages(self):
         """Load JSON config with available languages and voices."""
@@ -106,52 +107,65 @@ class MainWindow(QMainWindow):
         self.layout = QVBoxLayout(self.mainWidget)
         self.menuLayout = QHBoxLayout()
 
+        # Speaker label widget
+        self.speakerLabel = QLabel("Speaker:")
+        self.speakerLabel.setGeometry(20, 27, 80, 30)
+
+        # Speakers Widget
+        self.speakerW = QComboBox(self)
+        self.speakerW.addItems(self.SPEAKER.keys())
+        self.speakerW.setCurrentIndex(list(self.SPEAKER.keys()).index(self.default_speaker))
+        self.speakerW.setGeometry(70, 27, 80, 30)
+        self.speakerW.currentTextChanged.connect(self.change_speaker)
+
         # Voice speed label widget
         self.speedLabel = QLabel("Speed:")
-        self.speedLabel.setGeometry(120, 27, 80, 30)
+        self.speedLabel.setGeometry(220, 27, 80, 30)
 
         # Voice Speed Widget
         self.speedW = QSpinBox()
         self.speedW.setFocusPolicy(QtCore.Qt.NoFocus)
         self.speedW.setValue(3)
-        self.speedW.setGeometry(200, 27, 50, 30)
+        self.speedW.setGeometry(300, 27, 50, 30)
         self.speedW.setRange(1, 5)
         self.speedW.valueChanged.connect(self.change_speed)
 
         # Voice volume label widget
         self.volumeLabel = QLabel("Volume:")
-        self.volumeLabel.setGeometry(280, 27, 80, 30)
+        self.volumeLabel.setGeometry(380, 27, 80, 30)
 
         # Voice volume widget
         self.volumeW = QSlider(QtCore.Qt.Horizontal, self)
         self.volumeW.setValue(50)
         self.volumeW.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.volumeW.setGeometry(360, 27, 100, 30)
+        self.volumeW.setGeometry(460, 27, 100, 30)
         self.volumeW.valueChanged.connect(self.change_volume)
 
         # Voice language label widget
         self.langLabel = QLabel("Language:")
-        self.langLabel.setGeometry(380, 27, 20, 20)
+        self.langLabel.setGeometry(480, 27, 20, 20)
 
         # Voice language widget
         self.langW = QComboBox(self)
         self.langW.addItems(self.languages)
         self.langW.setCurrentIndex(self.languages.index(self.default_language))
-        self.langW.setGeometry(400, 27, 20, 20)
+        self.langW.setGeometry(500, 27, 20, 20)
         self.langW.currentTextChanged.connect(self.change_language)
 
         # Voice id label widget
         self.voiceLabel = QLabel("Voice:")
-        self.voiceLabel.setGeometry(380, 27, 20, 20)
+        self.voiceLabel.setGeometry(480, 27, 20, 20)
 
         # Voice id widget
         self.voiceW = QComboBox(self)
         self.voiceW.addItems(self.lang_voices)
         self.voiceW.setCurrentIndex(self.lang_voices.index(self.default_voice))
-        self.voiceW.setGeometry(400, 27, 20, 20)
+        self.voiceW.setGeometry(500, 27, 20, 20)
         self.voiceW.currentTextChanged.connect(self.change_voice)
 
         # Adding all widgets to the layout
+        self.menuLayout.addWidget(self.speakerLabel)
+        self.menuLayout.addWidget(self.speakerW)
         self.menuLayout.addWidget(self.speedLabel)
         self.menuLayout.addWidget(self.speedW)
         self.menuLayout.addWidget(self.langLabel)
@@ -171,6 +185,10 @@ class MainWindow(QMainWindow):
         self.volume = self.change_volume(self.volumeW.value())
         self.speed = self.change_speed(self.speedW.value())
         self.voice = self.default_voice
+
+    def change_speaker(self, speaker_name):
+        print(speaker_name)
+        self.speaker = self.SPEAKER[speaker_name]()
 
     def change_volume(self, volume):
         discrete_vol = int(volume*len(self.VOLUMES)/100)
