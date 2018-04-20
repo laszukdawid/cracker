@@ -7,8 +7,12 @@ class AbstractSpeaker(object):
 
     To be inherited only.
     """
-    def read_text(self, text, voiceid, rate, volume_text):
-        return NotImplementedError("Class %s doesn't implement aMethod()" %self.__class__.__name__)
+
+    RATES = []
+    VOLUMES = []
+
+    def read_text(self, text, **config):
+        return NotImplementedError("Class %s doesn't implement aMethod()" % self.__class__.__name__)
 
     @staticmethod
     def clean_text(text):

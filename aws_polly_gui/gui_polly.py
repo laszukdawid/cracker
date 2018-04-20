@@ -3,12 +3,12 @@
 import json
 
 from PyQt5 import QtCore
-from PyQt5.QtWidgets import QMainWindow, QAction
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit, QComboBox
+from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
+from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit
 
 from aws_polly_gui.text_parser import TextParser
-from aws_polly_gui.speaker.polly import Polly
 from aws_polly_gui.speaker.espeak import Espeak
+from aws_polly_gui.speaker.polly import Polly
 
 
 class MainWindow(QMainWindow):
@@ -17,12 +17,9 @@ class MainWindow(QMainWindow):
     language_file = "voices.json"
     default_voice = "Joanna"
     default_language = "English"
-    default_speaker = "polly"
+    default_speaker = "Polly"
 
-    RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
-    VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
-
-    SPEAKER = {"polly": Polly, "espeak": Espeak}
+    SPEAKER = {"Polly": Polly, "Espeak": Espeak}
 
     def __init__(self):
         super().__init__()
@@ -32,13 +29,13 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(QtCore.QSize(700, 150))
         self.setMaximumSize(QtCore.QSize(1000, 500))
 
-        self.load_languages()
-        self.setAction()
-        self.setWidgets()
-        self.initValues()
-
-        self.textParser = TextParser()
         self.speaker = self.SPEAKER[self.default_speaker]()
+        self.textParser = TextParser()
+
+        self.load_languages()
+        self.set_action()
+        self.set_widgets()
+        self.init_values()
 
     def load_languages(self):
         """Load JSON config with available languages and voices."""
@@ -48,7 +45,7 @@ class MainWindow(QMainWindow):
         self.languages = list(self.voices.keys())
         self.lang_voices = self.voices[self.default_language]
 
-    def setAction(self):
+    def set_action(self):
         _exit = QAction('Exit', self)
         _exit.setShortcut('Ctrl+Q')
         _exit.setStatusTip('Exit application')
@@ -99,7 +96,7 @@ class MainWindow(QMainWindow):
         toolbarPaper = self.addToolBar('Paper')
         toolbarPaper.addAction(_paper)
 
-    def setWidgets(self):
+    def set_widgets(self):
         self.mainWidget = QWidget(self)
         self.setCentralWidget(self.mainWidget)
 
@@ -135,7 +132,7 @@ class MainWindow(QMainWindow):
         self.volumeLabel.setGeometry(380, 27, 80, 30)
 
         # Voice volume widget
-        self.volumeW = QSlider(QtCore.Qt.Horizontal, self)
+        self.volumeW = QSlider(QtCore.Qt.Horizontal, self)  # Range: 0 -- 100
         self.volumeW.setValue(50)
         self.volumeW.setFocusPolicy(QtCore.Qt.NoFocus)
         self.volumeW.setGeometry(460, 27, 100, 30)
@@ -181,22 +178,34 @@ class MainWindow(QMainWindow):
         self.textEdit = QTextEdit()
         self.layout.addWidget(self.textEdit)
 
-    def initValues(self):
-        self.volume = self.change_volume(self.volumeW.value())
-        self.speed = self.change_speed(self.speedW.value())
+    def init_values(self):
+        self.change_volume(self.volumeW.value())
+        self.change_speed(self.speedW.value())
         self.voice = self.default_voice
 
     def change_speaker(self, speaker_name):
-        print(speaker_name)
+        """Action on changing speaker.
+
+        Important: Each speaker has its own configuration. These values should be updated on change."""
         self.speaker = self.SPEAKER[speaker_name]()
+        self.init_values()
+
+        # Currently only Polly has different voices
+        if speaker_name == 'Polly':
+            self.voiceLabel.show()
+            self.voiceW.show()
+        else:
+            self.voiceLabel.hide()
+            self.voiceW.hide()
 
     def change_volume(self, volume):
-        discrete_vol = int(volume*len(self.VOLUMES)/100)
-        self.volume_text = self.VOLUMES[discrete_vol]
+        """Volume should be on a percentage scale"""
+        discrete_vol = int(volume*len(self.speaker.VOLUMES)/100)
+        self.volume = self.speaker.VOLUMES[discrete_vol]
 
     def change_speed(self, speed):
         self.speed = speed
-        self.rate = self.RATES[speed-1]
+        self.rate = self.speaker.RATES[speed-1]
 
     def change_language(self, language):
         self.language = language
@@ -223,14 +232,22 @@ class MainWindow(QMainWindow):
         new_text = self.textParser.reduce_cite(text)
         self.textEdit.setText(new_text)
 
-    def read_text(self):
-        text = self.textEdit.toPlainText()
-        self.speaker.read_text(text, self.voice, self.rate, self.volume_text)
-
     def wiki_text(self):
+        """Sets the text box with wikipedia specific cleaned text.
+        Example of this is removing `citation needed` and other references.
+        """
         text = self.textEdit.toPlainText()
         text = self.textParser.wiki_text(text)
         self.textEdit.setText(text)
 
+    def read_text(self):
+        """Reads out text in the text_box with selected speaker."""
+        text = self.textEdit.toPlainText()
+        speaker_config = self._prepare_config()
+        self.speaker.read_text(text, **speaker_config)
 
-
+    def _prepare_config(self):
+        config = dict( rate=self.rate, volume=self.volume)
+        if self.speaker.__class__.__name__ == "Polly":
+            config['voiceid'] = self.voice
+        return config
