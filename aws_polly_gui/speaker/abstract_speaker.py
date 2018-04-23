@@ -10,13 +10,16 @@ class AbstractSpeaker(object):
 
     RATES = []
     VOLUMES = []
+    text_cleaners = [(re.compile(r'\n'), '. '),
+                     (re.compile(r'&'), 'and'),
+                    ]
 
     def read_text(self, text, **config):
-        return NotImplementedError("Class %s doesn't implement aMethod()" % self.__class__.__name__)
+        return NotImplementedError("Class %s doesn't implement `read_text()`" % self.__class__.__name__)
 
-    @staticmethod
-    def clean_text(text):
+    @classmethod
+    def clean_text(cls, text):
         text = text.translate(dict.fromkeys(range(8)))
-        text = re.sub(r'\n', ' ', text)
-        text = re.sub(r'&', 'and', text)
+        for compiled_regex, sub in cls.text_cleaners:
+            text = compiled_regex.sub(sub, text)
         return text

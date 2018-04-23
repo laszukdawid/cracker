@@ -182,6 +182,10 @@ class MainWindow(QMainWindow):
         self.textEdit = QTextEdit()
         self.layout.addWidget(self.textEdit)
 
+    def closeEvent(self, close_event):
+        self.speaker.__del__()
+        self.stop_process(self._last_pid)
+
     def init_values(self):
         self.change_volume(self.volumeW.value())
         self.change_speed(self.speedW.value())
@@ -244,14 +248,15 @@ class MainWindow(QMainWindow):
         text = self.textParser.wiki_text(text)
         self.textEdit.setText(text)
 
-    def stop_process(self, pid):
+    @staticmethod
+    def stop_process(pid):
         os.kill(pid, signal.SIGTERM)
 
     def read_text(self):
         """Reads out text in the text_box with selected speaker."""
         if self._last_pid is not None:
             self.stop_process(self._last_pid)
-        text = self.textEdit.toPlainText()
+        text = self.textEdit.toPlainText()  # TODO: toHtml() gives more control
         speaker_config = self._prepare_config()
         self._last_pid = self.speaker.read_text(text, **speaker_config)
 
