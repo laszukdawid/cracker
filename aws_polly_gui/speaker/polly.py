@@ -1,4 +1,5 @@
 import logging
+import os
 import subprocess
 import boto3
 
@@ -17,6 +18,12 @@ class Polly(AbstractSpeaker):
         self.client = boto3.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
+
+    def __del__(self):
+        try:
+            os.remove(self._cached_filepath)
+        except OSError:
+            pass
 
     def read_text(self, text, **config):
         """Reads out text."""
