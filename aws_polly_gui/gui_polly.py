@@ -55,8 +55,13 @@ class MainWindow(QMainWindow):
         _exit.setStatusTip('Exit application')
         _exit.triggered.connect(self.close)
 
+        _stop = QAction('Stop', self)
+        _stop.setShortcut('Ctrl+Shift+S')
+        _stop.setStatusTip('Stops text')
+        _stop.triggered.connect(self.stop_text)
+
         _read = QAction('Read', self)
-        _read.setShortcut('Ctrl+Shift+Space')
+        _read.setShortcut('Ctrl+Return')
         _read.setStatusTip('Reads text')
         _read.triggered.connect(self.read_text)
 
@@ -80,25 +85,23 @@ class MainWindow(QMainWindow):
 
         fileAction = menubar.addMenu('&File')
         fileAction.addAction(_exit)
-        readAction = menubar.addMenu('&Read')
-        readAction.addAction(_read)
+        textAction = menubar.addMenu('&Text')
+        textAction.addAction(_read)
+        textAction.addAction(_stop)
         reduceAction = menubar.addMenu('&Reduce')
         reduceAction.addAction(_reduce)
-        wikiAction = menubar.addMenu('&Wiki')
-        wikiAction.addAction(_wiki)
-        paperAction = menubar.addMenu('&Paper')
-        paperAction.addAction(_paper)
+        reduceAction.addAction(_wiki)
+        reduceAction.addAction(_paper)
 
         toolbarExit = self.addToolBar('Exit')
         toolbarExit.addAction(_exit)
-        toolbarRead = self.addToolBar('Read')
-        toolbarRead.addAction(_read)
+        toolbarText = self.addToolBar('Text')
+        toolbarText.addAction(_read)
+        toolbarText.addAction(_stop)
         toolbarReduce = self.addToolBar('Reduce')
         toolbarReduce.addAction(_reduce)
-        toolbarWiki = self.addToolBar('Wiki')
-        toolbarWiki.addAction(_wiki)
-        toolbarPaper = self.addToolBar('Paper')
-        toolbarPaper.addAction(_paper)
+        toolbarReduce.addAction(_wiki)
+        toolbarReduce.addAction(_paper)
 
     def set_widgets(self):
         self.mainWidget = QWidget(self)
@@ -184,7 +187,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, close_event):
         self.speaker.__del__()
-        self.stop_process(self._last_pid)
+        if self._last_pid is not None:
+            self.stop_process(self._last_pid)
 
     def init_values(self):
         self.change_volume(self.volumeW.value())
@@ -252,10 +256,13 @@ class MainWindow(QMainWindow):
     def stop_process(pid):
         os.kill(pid, signal.SIGTERM)
 
-    def read_text(self):
-        """Reads out text in the text_box with selected speaker."""
+    def stop_text(self):
         if self._last_pid is not None:
             self.stop_process(self._last_pid)
+
+    def read_text(self):
+        """Reads out text in the text_box with selected speaker."""
+        self.stop_text()
         text = self.textEdit.toPlainText()  # TODO: toHtml() gives more control
         speaker_config = self._prepare_config()
         self._last_pid = self.speaker.read_text(text, **speaker_config)

@@ -22,7 +22,7 @@ class Polly(AbstractSpeaker):
     def __del__(self):
         try:
             os.remove(self._cached_filepath)
-        except OSError:
+        except (OSError, TypeError):
             pass
 
     def read_text(self, text, **config):
