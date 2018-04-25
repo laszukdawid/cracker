@@ -187,8 +187,6 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, close_event):
         self.speaker.__del__()
-        if self._last_pid is not None:
-            self.stop_process(self._last_pid)
 
     def init_values(self):
         self.change_volume(self.volumeW.value())
@@ -252,13 +250,8 @@ class MainWindow(QMainWindow):
         text = self.textParser.wiki_text(text)
         self.textEdit.setText(text)
 
-    @staticmethod
-    def stop_process(pid):
-        os.kill(pid, signal.SIGTERM)
-
     def stop_text(self):
-        if self._last_pid is not None:
-            self.stop_process(self._last_pid)
+        self.speaker.stop_text()
 
     def read_text(self):
         """Reads out text in the text_box with selected speaker."""
