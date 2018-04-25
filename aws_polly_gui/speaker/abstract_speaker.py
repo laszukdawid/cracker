@@ -17,6 +17,9 @@ class AbstractSpeaker(object):
     def read_text(self, text, **config):
         return NotImplementedError("Class %s doesn't implement `read_text()`" % self.__class__.__name__)
 
+    def stop_text(self):
+        return NotImplementedError("Class %s doesn't implement `stop_text()`" % self.__class__.__name__)
+
     @classmethod
     def clean_text(cls, text):
         text = text.translate(dict.fromkeys(range(8)))

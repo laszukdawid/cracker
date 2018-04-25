@@ -1,7 +1,9 @@
 import logging
 import os
 import subprocess
+
 import boto3
+import vlc
 
 from aws_polly_gui.ssml import SSML
 from .abstract_speaker import AbstractSpeaker
@@ -18,6 +20,8 @@ class Polly(AbstractSpeaker):
         self.client = boto3.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
+        self.instance = vlc.Instance()
+        self.player = self.instance.media_player_new()
 
     def __del__(self):
         try:
@@ -68,9 +72,12 @@ class Polly(AbstractSpeaker):
             tmp_file.write(mp3)
         return filename
 
-    @staticmethod
-    def play_file(filepath):
+    def play_file(self, filepath):
         """Plays mp3 file using UNIX cmd. Returns pid to the process."""
-        pid = subprocess.Popen(["mpg123", filepath]).pid
-        return pid
+        media = self.instance.media_new(filepath)
+        self.player.set_media(media)
+        self.player.play()
+        return
 
+    def stop_text(self):
+        self.player.stop()
