@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
         _stop.triggered.connect(self.stop_text)
 
         _read = QAction('Read', self)
-        _read.setShortcut('Ctrl+Return')
+        _read.setShortcut('Ctrl+Shift+Space')
         _read.setStatusTip('Reads text')
         _read.triggered.connect(self.read_text)
 
