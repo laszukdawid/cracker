@@ -36,8 +36,8 @@ class Polly(AbstractSpeaker):
 
         voiceid = config['voiceid'] if 'voiceid' in config else None
         rate = config['rate'] if 'rate' in config else None
-        volume_text = config['volume_text'] if 'volume_text' in config else None
-        ssml = SSML(text, rate=rate, volume=volume_text)
+        volume = config['volume'] if 'volume' in config else None
+        ssml = SSML(text, rate=rate, volume=volume)
 
         if self._cached_ssml == ssml and self._cached_voiceid == voiceid:
             self._logger.debug("Playing cached file")
