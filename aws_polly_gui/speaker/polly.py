@@ -20,6 +20,7 @@ class Polly(AbstractSpeaker):
         self.client = boto3.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
+        self._cached_voiceid = ""
         self.instance = vlc.Instance()
         self.player = self.instance.media_player_new()
 
@@ -38,15 +39,16 @@ class Polly(AbstractSpeaker):
         volume_text = config['volume_text'] if 'volume_text' in config else None
         ssml = SSML(text, rate=rate, volume=volume_text)
 
-        if self._cached_ssml == ssml:
+        if self._cached_ssml == ssml and self._cached_voiceid == voiceid:
             self._logger.debug("Playing cached file")
             filepath = self._cached_filepath
         else:
             self._logger.debug("Re_cached_textquest from Polly")
             filepath = self.ask_polly(str(ssml), voiceid)
             self._cached_ssml, self._cached_filepath = ssml, filepath
-        pid = self.play_file(filepath)
-        return pid
+            self._cached_voiceid = voiceid
+        self.play_file(filepath)
+        return
 
     def ask_polly(self, ssml_text, voiceid):
         speech = self.create_speech(ssml_text, voiceid)
