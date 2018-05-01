@@ -1,3 +1,4 @@
+import html
 import logging
 import os
 import subprocess
@@ -30,9 +31,14 @@ class Polly(AbstractSpeaker):
         except (OSError, TypeError):
             pass
 
+    @staticmethod
+    def _escape_tags(text):
+        return html.escape(text, quote=False)
+
     def read_text(self, text, **config):
         """Reads out text."""
         text = self.clean_text(text)
+        text = self._escape_tags(text)
 
         voiceid = config['voiceid'] if 'voiceid' in config else None
         rate = config['rate'] if 'rate' in config else None
@@ -83,3 +89,4 @@ class Polly(AbstractSpeaker):
 
     def stop_text(self):
         self.player.stop()
+
