@@ -9,6 +9,8 @@ Installation
 *PyQt5* is used to display GUI. To install PyQt5 head off to their `installation page <http://pyqt.sourceforge.net/Docs/PyQt5/installation.html>`_.
 Package is currently heavily favouring Ubuntu as end OS. If you are one of the lucky ones then the installation requires:
 
+.. code-block:: bash
+
     $ sudo sh install.sh
     $ pip install -r requirements.txt
 
@@ -24,5 +26,8 @@ Currently reading out is performed by downloading mp3 format of the request and 
 
 Suggested execution command
 
+.. code-block:: bash
+
     $ cd aws-polly-gui
     $ python -m aws_polly_gui.main
+
