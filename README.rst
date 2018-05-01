@@ -7,13 +7,12 @@ Installation
 ============
 
 *PyQt5* is used to display GUI. To install PyQt5 head off to their `installation page <http://pyqt.sourceforge.net/Docs/PyQt5/installation.html>`_.
-If you are trying this on Ubuntu then simple `apt` command should do
+Package is currently heavily favouring Ubuntu as end OS. If you are one of the lucky ones then the installation requires:
 
-    $ sudo apt install python-qt5-dev-tools
-
-For all other components use 
-
+    $ sudo sh install.sh
     $ pip install -r requirements.txt
+
+For other OS you'd need *PyQt5* and *vlc*. 
 
 
 Usage
