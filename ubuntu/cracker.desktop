@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Cracker
+GenericName=Cracker for Polly
+GenericName[pl]=Cracker for Polly
+Comment=Graphical interface for text-to-speech
+TryExec=cracker
+Exec=cracker
+Terminal=false
+Type=Application
+Keywords=Text;Reader;
+Icon=papuga
+Categories=Utility;
+StartupNotify=true
