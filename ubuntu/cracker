@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# TODO: path/to/git?!?!?!?
+cd /path/to/git/repo
+python3 -m aws_polly_gui.main
