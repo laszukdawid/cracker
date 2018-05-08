@@ -75,10 +75,10 @@ class MainWindow(QMainWindow):
         _wiki.setStatusTip('Reduces wiki citations')
         _wiki.triggered.connect(self.wiki_text)
 
-        _paper = QAction('Paper', self)
-        _paper.setShortcut('Ctrl+P')
-        _paper.setStatusTip('Paper')
-        _paper.triggered.connect(self.reduce_cite)
+        _cite = QAction('Citation', self)
+        _cite.setShortcut('Ctrl+Shift+C')
+        _cite.setStatusTip('Citation')
+        _cite.triggered.connect(self.reduce_cite)
 
         # MenuBar and ToolBar
         menubar = self.menuBar()
@@ -91,7 +91,7 @@ class MainWindow(QMainWindow):
         reduceAction = menubar.addMenu('&Reduce')
         reduceAction.addAction(_reduce)
         reduceAction.addAction(_wiki)
-        reduceAction.addAction(_paper)
+        reduceAction.addAction(_cite)
 
         toolbarExit = self.addToolBar('Exit')
         toolbarExit.addAction(_exit)
@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
         toolbarReduce = self.addToolBar('Reduce')
         toolbarReduce.addAction(_reduce)
         toolbarReduce.addAction(_wiki)
-        toolbarReduce.addAction(_paper)
+        toolbarReduce.addAction(_cite)
 
     def set_widgets(self):
         self.mainWidget = QWidget(self)
