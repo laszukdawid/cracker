@@ -3,12 +3,15 @@ import re
 
 class TextParser:
 
-    citation = re.compile(r'[\(\[]\w+, \d{4}(;\s\w+, \d{4})*[\)\]]')
+    citation_author_year = re.compile(r'[\(\[]\w+, \d{4}(;\s\w+, \d{4})*[\)\]]')
+    citation_numbers_comma = re.compile(r'\[\d+(,\s*\d+)*\]')
 
     @classmethod
     def reduce_cite(cls, text):
         """Removes citations from pasted text."""
-        return cls.citation.sub("", text)
+        text = cls.citation_numbers_comma.sub("", text)
+        text = cls.citation_author_year.sub("", text)
+        return text
 
     @classmethod
     def reduce_text(cls, text):
