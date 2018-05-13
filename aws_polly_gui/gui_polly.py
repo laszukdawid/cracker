@@ -1,13 +1,10 @@
 #!/usr/bin/python
 # coding: UTF-8
-import json
-import os
-import signal
-
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
 from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit
 
+from aws_polly_gui.configuration import Configuration
 from aws_polly_gui.text_parser import TextParser
 from aws_polly_gui.speaker.espeak import Espeak
 from aws_polly_gui.speaker.polly import Polly
@@ -15,11 +12,6 @@ from aws_polly_gui.speaker.polly import Polly
 
 class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
-
-    language_file = "voices.json"
-    default_voice = "Joanna"
-    default_language = "English"
-    default_speaker = "Polly"
 
     SPEAKER = {"Polly": Polly, "Espeak": Espeak}
 
@@ -31,23 +23,16 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(QtCore.QSize(700, 150))
         self.setMaximumSize(QtCore.QSize(1000, 500))
 
-        self.speaker = self.SPEAKER[self.default_speaker]()
+        self.config = Configuration()
+        _ = self.config.read_default_config()
+        self.speaker = self.SPEAKER[self.config.speaker]()
         self.textParser = TextParser()
 
-        self.load_languages()
         self.set_action()
         self.set_widgets()
         self.init_values()
 
         self._last_pid = None
-
-    def load_languages(self):
-        """Load JSON config with available languages and voices."""
-        with open(self.language_file) as json_file:
-            lang_map = json.loads(json_file.read())
-        self.voices = lang_map["Languages"]
-        self.languages = list(self.voices.keys())
-        self.lang_voices = self.voices[self.default_language]
 
     def set_action(self):
         _exit = QAction('Exit', self)
@@ -118,7 +103,7 @@ class MainWindow(QMainWindow):
         # Speakers Widget
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.SPEAKER.keys())
-        self.speakerW.setCurrentIndex(list(self.SPEAKER.keys()).index(self.default_speaker))
+        self.speakerW.setCurrentIndex(list(self.SPEAKER.keys()).index(self.config.speaker))
         self.speakerW.setGeometry(70, 27, 80, 30)
         self.speakerW.currentTextChanged.connect(self.change_speaker)
 
@@ -129,7 +114,7 @@ class MainWindow(QMainWindow):
         # Voice Speed Widget
         self.speedW = QSpinBox()
         self.speedW.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.speedW.setValue(3)
+        self.speedW.setValue(self.config.speed)
         self.speedW.setGeometry(300, 27, 50, 30)
         self.speedW.setRange(1, 5)
         self.speedW.valueChanged.connect(self.change_speed)
@@ -151,8 +136,8 @@ class MainWindow(QMainWindow):
 
         # Voice language widget
         self.langW = QComboBox(self)
-        self.langW.addItems(self.languages)
-        self.langW.setCurrentIndex(self.languages.index(self.default_language))
+        self.langW.addItems(self.config.languages)
+        self.langW.setCurrentIndex(self.config.languages.index(self.config.language))
         self.langW.setGeometry(500, 27, 20, 20)
         self.langW.currentTextChanged.connect(self.change_language)
 
@@ -162,8 +147,8 @@ class MainWindow(QMainWindow):
 
         # Voice id widget
         self.voiceW = QComboBox(self)
-        self.voiceW.addItems(self.lang_voices)
-        self.voiceW.setCurrentIndex(self.lang_voices.index(self.default_voice))
+        self.voiceW.addItems(self.config.lang_voices)
+        self.voiceW.setCurrentIndex(self.config.lang_voices.index(self.config.voice))
         self.voiceW.setGeometry(500, 27, 20, 20)
         self.voiceW.currentTextChanged.connect(self.change_voice)
 
@@ -191,7 +176,7 @@ class MainWindow(QMainWindow):
     def init_values(self):
         self.change_volume(self.volumeW.value())
         self.change_speed(self.speedW.value())
-        self.voice = self.default_voice
+        self.voice = self.config.voice
 
     def change_speaker(self, speaker_name):
         """Action on changing speaker.
@@ -218,15 +203,15 @@ class MainWindow(QMainWindow):
         self.rate = self.speaker.RATES[speed-1]
 
     def change_language(self, language):
-        self.language = language
-        voices = self.voices[language]
+        self.config.language = language
         self.voiceW.clear()
+        voices = self.config.voices[language]
         self.voiceW.addItems(voices)
 
         voice = voices[0]
-        if self.default_voice in voices:
-            voice = self.default_voice
-            self.voiceW.setCurrentIndex(voices.index(self.default_voice))
+        if hasattr(self.config, 'voice') and self.config.voice in voices:
+            voice = self.config.voice
+            self.voiceW.setCurrentIndex(voices.index(voice))
         self.voice = voice
 
     def change_voice(self, voice):
