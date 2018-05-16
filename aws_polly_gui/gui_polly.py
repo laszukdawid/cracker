@@ -20,8 +20,8 @@ class MainWindow(QMainWindow):
 
         self.resize(800, 250)
         self.setWindowTitle('Simple GUI')
-        self.setMinimumSize(QtCore.QSize(700, 150))
-        self.setMaximumSize(QtCore.QSize(1000, 500))
+        #self.setMinimumSize(QtCore.QSize(700, 150))
+        #self.setMaximumSize(QtCore.QSize(1000, 500))
 
         self.config = Configuration()
         _ = self.config.read_default_config()
@@ -96,74 +96,73 @@ class MainWindow(QMainWindow):
         self.layout = QVBoxLayout(self.mainWidget)
         self.menuLayout = QHBoxLayout()
 
-        # Speaker label widget
+        # Speaker - label and widget
         self.speakerLabel = QLabel("Speaker:")
         self.speakerLabel.setGeometry(20, 27, 80, 30)
-
-        # Speakers Widget
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.SPEAKER.keys())
         self.speakerW.setCurrentIndex(list(self.SPEAKER.keys()).index(self.config.speaker))
         self.speakerW.setGeometry(70, 27, 80, 30)
         self.speakerW.currentTextChanged.connect(self.change_speaker)
+        speaker = QVBoxLayout()
+        speaker.addWidget(self.speakerLabel)
+        speaker.addWidget(self.speakerW)
 
-        # Voice speed label widget
+        # Voice - label and selector
         self.speedLabel = QLabel("Speed:")
         self.speedLabel.setGeometry(220, 27, 80, 30)
-
-        # Voice Speed Widget
         self.speedW = QSpinBox()
         self.speedW.setFocusPolicy(QtCore.Qt.NoFocus)
         self.speedW.setValue(self.config.speed)
         self.speedW.setGeometry(300, 27, 50, 30)
         self.speedW.setRange(1, 5)
         self.speedW.valueChanged.connect(self.change_speed)
+        speed = QVBoxLayout()
+        speed.addWidget(self.speedLabel)
+        speed.addWidget(self.speedW)
 
-        # Voice volume label widget
+        # Volume - label and slider
         self.volumeLabel = QLabel("Volume:")
         self.volumeLabel.setGeometry(380, 27, 80, 30)
-
-        # Voice volume widget
         self.volumeW = QSlider(QtCore.Qt.Horizontal, self)  # Range: 0 -- 100
         self.volumeW.setValue(50)
         self.volumeW.setFocusPolicy(QtCore.Qt.NoFocus)
         self.volumeW.setGeometry(460, 27, 100, 30)
         self.volumeW.valueChanged.connect(self.change_volume)
+        volume = QVBoxLayout()
+        volume.addWidget(self.volumeLabel)
+        volume.addWidget(self.volumeW)
 
-        # Voice language label widget
+        # Language - label and selection
         self.langLabel = QLabel("Language:")
         self.langLabel.setGeometry(480, 27, 20, 20)
-
-        # Voice language widget
         self.langW = QComboBox(self)
         self.langW.addItems(self.config.languages)
         self.langW.setCurrentIndex(self.config.languages.index(self.config.language))
         self.langW.setGeometry(500, 27, 20, 20)
         self.langW.currentTextChanged.connect(self.change_language)
+        lang = QVBoxLayout()
+        lang.addWidget(self.langLabel)
+        lang.addWidget(self.langW)
 
-        # Voice id label widget
+        # Voice - label and selection
         self.voiceLabel = QLabel("Voice:")
         self.voiceLabel.setGeometry(480, 27, 20, 20)
-
-        # Voice id widget
         self.voiceW = QComboBox(self)
         self.voiceW.addItems(self.config.lang_voices)
         self.voiceW.setCurrentIndex(self.config.lang_voices.index(self.config.voice))
         self.voiceW.setGeometry(500, 27, 20, 20)
         self.voiceW.currentTextChanged.connect(self.change_voice)
+        voice = QVBoxLayout()
+        voice.addWidget(self.voiceLabel)
+        voice.addWidget(self.voiceW)
 
         # Adding all widgets to the layout
-        self.menuLayout.addWidget(self.speakerLabel)
-        self.menuLayout.addWidget(self.speakerW)
-        self.menuLayout.addWidget(self.speedLabel)
-        self.menuLayout.addWidget(self.speedW)
-        self.menuLayout.addWidget(self.langLabel)
-        self.menuLayout.addWidget(self.langW)
-        self.menuLayout.addWidget(self.voiceLabel)
-        self.menuLayout.addWidget(self.voiceW)
-        self.menuLayout.addWidget(self.volumeLabel)
-        self.menuLayout.addWidget(self.volumeW)
-
+        self.menuLayout.addLayout(speaker)
+        self.menuLayout.addLayout(speed)
+        self.menuLayout.addLayout(lang)
+        self.menuLayout.addLayout(voice)
+        self.menuLayout.addLayout(volume)
         self.layout.addLayout(self.menuLayout)
 
         # Notepad
