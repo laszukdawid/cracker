@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # coding: UTF-8
-from PyQt5 import QtCore
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
 from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit
 
@@ -19,9 +19,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.resize(800, 250)
-        self.setWindowTitle('Simple GUI')
-        #self.setMinimumSize(QtCore.QSize(700, 150))
-        #self.setMaximumSize(QtCore.QSize(1000, 500))
+        self.setWindowTitle('Cracker GUI')
 
         self.config = Configuration()
         _ = self.config.read_default_config()
@@ -112,7 +110,7 @@ class MainWindow(QMainWindow):
         self.speedLabel = QLabel("Speed:")
         self.speedLabel.setGeometry(220, 27, 80, 30)
         self.speedW = QSpinBox()
-        self.speedW.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.speedW.setFocusPolicy(Qt.NoFocus)
         self.speedW.setValue(self.config.speed)
         self.speedW.setGeometry(300, 27, 50, 30)
         self.speedW.setRange(1, 5)
@@ -124,9 +122,9 @@ class MainWindow(QMainWindow):
         # Volume - label and slider
         self.volumeLabel = QLabel("Volume:")
         self.volumeLabel.setGeometry(380, 27, 80, 30)
-        self.volumeW = QSlider(QtCore.Qt.Horizontal, self)  # Range: 0 -- 100
+        self.volumeW = QSlider(Qt.Horizontal, self)  # Range: 0 -- 100
         self.volumeW.setValue(50)
-        self.volumeW.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.volumeW.setFocusPolicy(Qt.NoFocus)
         self.volumeW.setGeometry(460, 27, 100, 30)
         self.volumeW.valueChanged.connect(self.change_volume)
         volume = QVBoxLayout()
@@ -233,6 +231,10 @@ class MainWindow(QMainWindow):
         text = self.textEdit.toPlainText()
         text = self.textParser.wiki_text(text)
         self.textEdit.setText(text)
+
+    def pause_text(self):
+        # TODO: not usable yet.
+        self.speaker.pause_text()
 
     def stop_text(self):
         self.speaker.stop_text()

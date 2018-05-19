@@ -8,6 +8,7 @@ class AbstractSpeaker(object):
     To be inherited only.
     """
 
+    TMP_FILEPATH = "tmp.mp3"
     RATES = []
     VOLUMES = []
     text_cleaners = [(re.compile(r'\n'), '. '),
