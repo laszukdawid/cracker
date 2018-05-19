@@ -1,10 +1,10 @@
 import html
 import logging
 import os
-import subprocess
 
 import boto3
-import vlc
+from PyQt5.QtCore import QUrl
+from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer, QMediaPlaylist
 
 from aws_polly_gui.ssml import SSML
 from .abstract_speaker import AbstractSpeaker
@@ -22,8 +22,7 @@ class Polly(AbstractSpeaker):
         self._cached_ssml = SSML()
         self._cached_filepath = ""
         self._cached_voiceid = ""
-        self.instance = vlc.Instance()
-        self.player = self.instance.media_player_new()
+        self.player = QMediaPlayer()
 
     def __del__(self):
         try:
@@ -75,18 +74,25 @@ class Polly(AbstractSpeaker):
     def save_mp3(cls, response):
         """Stores downloaded response as an mp3."""
         mp3 = response["AudioStream"].read()
-        filename = "tmp.mp3"
+        filename = os.path.abspath(AbstractSpeaker.TMP_FILEPATH)
         with open(filename, 'wb') as tmp_file:
             tmp_file.write(mp3)
         return filename
 
     def play_file(self, filepath):
         """Plays mp3 file using UNIX cmd. Returns pid to the process."""
-        media = self.instance.media_new(filepath)
-        self.player.set_media(media)
+        url = QUrl.fromLocalFile(filepath)
+        media = QMediaContent(url)
+        self.player.setMedia(media)
         self.player.play()
         return
 
     def stop_text(self):
         self.player.stop()
+
+    def pause_text(self):
+        if self.player.state() == self.player.PausedState:
+            self.player.play()
+        else:
+            self.player.pause()
 
