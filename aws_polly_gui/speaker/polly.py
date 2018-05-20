@@ -4,7 +4,7 @@ import os
 
 import boto3
 from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer, QMediaPlaylist
+from PyQt5.QtMultimedia import QMediaContent
 
 from aws_polly_gui.ssml import SSML
 from .abstract_speaker import AbstractSpeaker
@@ -17,12 +17,12 @@ class Polly(AbstractSpeaker):
     RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
 
-    def __init__(self):
+    def __init__(self, player):
         self.client = boto3.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
         self._cached_voice = ""
-        self.player = QMediaPlayer()
+        self.player = player
 
     def __del__(self):
         try:
@@ -89,10 +89,3 @@ class Polly(AbstractSpeaker):
 
     def stop_text(self):
         self.player.stop()
-
-    def pause_text(self):
-        if self.player.state() == self.player.PausedState:
-            self.player.play()
-        else:
-            self.player.pause()
-
