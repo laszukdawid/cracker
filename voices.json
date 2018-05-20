@@ -1,7 +1,13 @@
-{"Languages": {
-    "English":["Sali", "Kimberly", "Kendra", "Joanna", "Ivy", "Matthew", "Justin", "Joey"],
-    "Polish": ["Ewa", "Maja", "Jan", "Jacek"],
-    "Spanish": ["Penelope", "Miguel"]
-}
+{"Polly": {"Languages": {
+  "English":["Salli", "Kimberly", "Kendra", "Joanna", "Ivy", "Matthew", "Justin", "Joey"],
+  "Polish": ["Ewa", "Maja", "Jan", "Jacek"],
+  "Spanish": ["Penelope", "Miguel"]
+}},
+  "Espeak": {"Languages":
+  {
+    "English": ["english"],
+    "Polish": ["polish"],
+    "Spanish": ["spanish"]
+  }}
 }
 
