@@ -1,8 +1,10 @@
 #!/usr/bin/python
 # coding: UTF-8
+import logging
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
 from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit
+from PyQt5.QtMultimedia import QMediaPlayer
 
 from aws_polly_gui.configuration import Configuration
 from aws_polly_gui.text_parser import TextParser
@@ -14,16 +16,18 @@ class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
 
     SPEAKER = {"Polly": Polly, "Espeak": Espeak}
+    _logger = logging.getLogger(__name__)
 
     def __init__(self):
         super().__init__()
 
         self.resize(800, 250)
         self.setWindowTitle('Cracker GUI')
+        self.player = QMediaPlayer()
 
         self.config = Configuration()
         _ = self.config.read_default_config()
-        self.speaker = self.SPEAKER[self.config.speaker]()
+        self.speaker = self.SPEAKER[self.config.speaker](self.player)
         self.textParser = TextParser()
 
         self.set_action()
@@ -47,6 +51,14 @@ class MainWindow(QMainWindow):
         _read.setShortcut('Ctrl+Shift+Space')
         _read.setStatusTip('Reads text')
         _read.triggered.connect(self.read_text)
+
+        # TODO: This, and above, should be buttons, so that the width doesn't change
+        self._toggle = QAction('Pause', self)
+        self._toggle.setDisabled(True)
+        self._toggle.setShortcut('Ctrl+Space')
+        self._toggle.setStatusTip('Toggle read')
+        self._toggle.triggered.connect(self.toggle_read)
+        self.player.stateChanged.connect(self.toggle_label)
 
         _reduce = QAction('Reduce', self)
         _reduce.setShortcut('Ctrl+R')
@@ -81,6 +93,7 @@ class MainWindow(QMainWindow):
         toolbarText = self.addToolBar('Text')
         toolbarText.addAction(_read)
         toolbarText.addAction(_stop)
+        toolbarText.addAction(self._toggle)
         toolbarReduce = self.addToolBar('Reduce')
         toolbarReduce.addAction(_reduce)
         toolbarReduce.addAction(_wiki)
@@ -180,7 +193,7 @@ class MainWindow(QMainWindow):
         """Action on changing speaker.
 
         Important: Each speaker has its own configuration. These values should be updated on change."""
-        self.speaker = self.SPEAKER[speaker_name]()
+        self.speaker = self.SPEAKER[speaker_name](self.player)
         self.config.load_config(speaker_name)
         self.init_values()
 
@@ -226,9 +239,24 @@ class MainWindow(QMainWindow):
         text = self.textParser.wiki_text(text)
         self.textEdit.setText(text)
 
-    def pause_text(self):
-        # TODO: not usable yet.
-        self.speaker.pause_text()
+    def toggle_label(self, state):
+        if QMediaPlayer.PlayingState == state:
+            self._toggle.setText("Pause")
+            self._toggle.setDisabled(False)
+        elif QMediaPlayer.StoppedState == state:
+            self._toggle.setText("Pause")
+            self._toggle.setDisabled(True)
+        elif QMediaPlayer.PausedState == state:
+            self._toggle.setText("Resume")
+            self._toggle.setDisabled(False)
+        else:
+            self._logger.error("Unrecognisible state '%s' in MediaPlayer", state)
+
+    def toggle_read(self):
+        if self.player.state() == QMediaPlayer.PausedState:
+            self.player.play()
+        else:
+            self.player.pause()
 
     def stop_text(self):
         self.speaker.stop_text()

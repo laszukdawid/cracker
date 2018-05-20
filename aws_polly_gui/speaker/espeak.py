@@ -4,7 +4,7 @@ import subprocess
 
 from .abstract_speaker import AbstractSpeaker
 from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer, QMediaPlaylist
+from PyQt5.QtMultimedia import QMediaContent
 
 
 class Espeak(AbstractSpeaker):
@@ -18,11 +18,8 @@ class Espeak(AbstractSpeaker):
     RATES = [80, 120, 160, 200, 240]
     VOLUMES = range(100)
 
-    def __init__(self, rate=None, volume=100):
-        self._rate = rate
-        self._volume = volume
-        self.pid = None
-        self.player = QMediaPlayer()
+    def __init__(self, player):
+        self.player = player
 
     def __del__(self):
         self.stop_text()
@@ -31,9 +28,9 @@ class Espeak(AbstractSpeaker):
         filepath = os.path.abspath(AbstractSpeaker.TMP_FILEPATH)
         command = ["espeak"]
         command += self._process_config(**config)
-        command.append("'{}'".format(self.clean_text(text)))
         command += ["-w", filepath]
-        self.pid = subprocess.Popen(command).pid
+        command.append("'{}'".format(self.clean_text(text)))
+        subprocess.call(command)
         self.play_file(filepath)
         return
 
