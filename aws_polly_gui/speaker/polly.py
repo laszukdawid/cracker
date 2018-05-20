@@ -21,7 +21,7 @@ class Polly(AbstractSpeaker):
         self.client = boto3.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
-        self._cached_voiceid = ""
+        self._cached_voice = ""
         self.player = QMediaPlayer()
 
     def __del__(self):
@@ -39,35 +39,35 @@ class Polly(AbstractSpeaker):
         text = self.clean_text(text)
         text = self._escape_tags(text)
 
-        voiceid = config['voiceid'] if 'voiceid' in config else None
+        voice = config['voice'] if 'voice' in config else None
         rate = config['rate'] if 'rate' in config else None
         volume = config['volume'] if 'volume' in config else None
         ssml = SSML(text, rate=rate, volume=volume)
 
-        if self._cached_ssml == ssml and self._cached_voiceid == voiceid:
+        if self._cached_ssml == ssml and self._cached_voice == voice:
             self._logger.debug("Playing cached file")
             filepath = self._cached_filepath
         else:
             self._logger.debug("Re_cached_textquest from Polly")
-            filepath = self.ask_polly(str(ssml), voiceid)
+            filepath = self.ask_polly(str(ssml), voice)
             self._cached_ssml, self._cached_filepath = ssml, filepath
-            self._cached_voiceid = voiceid
+            self._cached_voice = voice
         self.play_file(filepath)
         return
 
-    def ask_polly(self, ssml_text, voiceid):
-        speech = self.create_speech(ssml_text, voiceid)
+    def ask_polly(self, ssml_text, voice):
+        speech = self.create_speech(ssml_text, voice)
         response = self.client.synthesize_speech(**speech)
         filepath = self.save_mp3(response)
         return filepath
 
     @staticmethod
-    def create_speech(ssml_text, voiceid):
+    def create_speech(ssml_text, voice):
         return dict(
             OutputFormat='mp3',
             TextType='ssml',
             Text=ssml_text,
-            VoiceId=voiceid
+            VoiceId=voice
         )
 
     @classmethod

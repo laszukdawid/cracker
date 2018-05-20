@@ -173,6 +173,7 @@ class MainWindow(QMainWindow):
     def init_values(self):
         self.change_volume(self.volumeW.value())
         self.change_speed(self.speedW.value())
+        self.change_language(self.config.language)
         self.voice = self.config.voice
 
     def change_speaker(self, speaker_name):
@@ -180,15 +181,8 @@ class MainWindow(QMainWindow):
 
         Important: Each speaker has its own configuration. These values should be updated on change."""
         self.speaker = self.SPEAKER[speaker_name]()
+        self.config.load_config(speaker_name)
         self.init_values()
-
-        # Currently only Polly has different voices
-        if speaker_name == 'Polly':
-            self.voiceLabel.show()
-            self.voiceW.show()
-        else:
-            self.voiceLabel.hide()
-            self.voiceW.hide()
 
     def change_volume(self, volume):
         """Volume should be on a percentage scale"""
@@ -247,7 +241,5 @@ class MainWindow(QMainWindow):
         self._last_pid = self.speaker.read_text(text, **speaker_config)
 
     def _prepare_config(self):
-        config = dict( rate=self.rate, volume=self.volume)
-        if self.speaker.__class__.__name__ == "Polly":
-            config['voiceid'] = self.voice
+        config = dict(rate=self.rate, volume=self.volume, voice=self.voice)
         return config

@@ -61,4 +61,6 @@ class Espeak(AbstractSpeaker):
             options += ['-a', str(config['volume'])]
         if 'rate' in config:
             options += ['-s', str(config['rate'])]
+        if 'voice' in config:
+            options += ['-v', str(config['voice'])]
         return options
