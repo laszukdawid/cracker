@@ -3,7 +3,7 @@
 import logging
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
-from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QSlider, QTextEdit
+from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QGridLayout, QLabel, QSpinBox, QSlider, QTextEdit
 from PyQt5.QtMultimedia import QMediaPlayer
 
 
@@ -93,75 +93,56 @@ class MainWindow(QMainWindow):
 
         # LAYOUT
         layout = QVBoxLayout(self.mainWidget)
-        menuLayout = QHBoxLayout()
+        menuLayout = QGridLayout()
 
         # Speaker - label and widget
         self.speakerLabel = QLabel("Speaker:")
-        self.speakerLabel.setGeometry(20, 27, 80, 30)
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.speakers.keys())
         self.speakerW.setCurrentIndex(list(self.speakers.keys()).index(self.config.speaker))
-        self.speakerW.setGeometry(70, 27, 80, 30)
         self.speakerW.currentTextChanged.connect(self.change_speaker)
-        speakerBox = QVBoxLayout()
-        speakerBox.addWidget(self.speakerLabel)
-        speakerBox.addWidget(self.speakerW)
+        menuLayout.addWidget(self.speakerLabel, 0, 0)
+        menuLayout.addWidget(self.speakerW, 1, 0)
 
         # Voice - label and selector
         self.speedLabel = QLabel("Speed:")
-        self.speedLabel.setGeometry(220, 27, 80, 30)
         self.speedW = QSpinBox()
-        self.speedW.setFocusPolicy(Qt.NoFocus)
         self.speedW.setValue(self.config.speed)
-        self.speedW.setGeometry(300, 27, 50, 30)
         self.speedW.setRange(1, 5)
         self.speedW.valueChanged.connect(self.change_speed)
-        speedBox = QVBoxLayout()
-        speedBox.addWidget(self.speedLabel)
-        speedBox.addWidget(self.speedW)
+        menuLayout.addWidget(self.speedLabel, 0, 3)
+        menuLayout.addWidget(self.speedW, 1, 3)
 
         # Volume - label and slider
         self.volumeLabel = QLabel("Volume:")
-        self.volumeLabel.setGeometry(380, 27, 80, 30)
         self.volumeW = QSlider(Qt.Horizontal, self)  # Range: 0 -- 100
         self.volumeW.setValue(50)
-        self.volumeW.setFocusPolicy(Qt.NoFocus)
-        self.volumeW.setGeometry(460, 27, 100, 30)
         self.volumeW.valueChanged.connect(self.change_volume)
-        volumeBox = QVBoxLayout()
-        volumeBox.addWidget(self.volumeLabel)
-        volumeBox.addWidget(self.volumeW)
+        menuLayout.addWidget(self.volumeLabel, 0, 4)
+        menuLayout.addWidget(self.volumeW, 1, 4)
 
         # Language - label and selection
         langLabel = QLabel("Language:")
-        langLabel.setGeometry(480, 27, 20, 20)
         langW = QComboBox(self)
         langW.addItems(self.config.languages)
         langW.setCurrentIndex(self.config.languages.index(self.config.language))
-        langW.setGeometry(500, 27, 20, 20)
         langW.currentTextChanged.connect(self.change_language)
-        langBox = QVBoxLayout()
-        langBox.addWidget(langLabel)
-        langBox.addWidget(langW)
+        menuLayout.addWidget(langLabel, 0, 1)
+        menuLayout.addWidget(langW, 1, 1)
 
         # Voice - label and selection
         voiceLabel = QLabel("Voice:")
-        voiceLabel.setGeometry(480, 27, 20, 20)
         self.voiceW = QComboBox(self)
         self.voiceW.addItems(self.config.lang_voices)
         self.voiceW.setCurrentIndex(self.config.lang_voices.index(self.config.voice))
         self.voiceW.setGeometry(500, 27, 20, 20)
         self.voiceW.currentTextChanged.connect(self.change_voice)
-        voiceBox = QVBoxLayout()
-        voiceBox.addWidget(voiceLabel)
-        voiceBox.addWidget(self.voiceW)
+        menuLayout.addWidget(voiceLabel, 0, 2)
+        menuLayout.addWidget(self.voiceW, 1, 2)
 
-        # Adding all widgets to the layout
-        menuLayout.addLayout(speakerBox)
-        menuLayout.addLayout(speedBox)
-        menuLayout.addLayout(langBox)
-        menuLayout.addLayout(voiceBox)
-        menuLayout.addLayout(volumeBox)
+        # Spacing between all widgets and tighten layout (stretch last column)
+        menuLayout.setSpacing(10)
+        menuLayout.setColumnStretch(99, 1)
         layout.addLayout(menuLayout)
 
         # Notepad
