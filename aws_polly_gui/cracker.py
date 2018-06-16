@@ -13,7 +13,7 @@ from aws_polly_gui.speaker.polly import Polly
 class Cracker(object):
     """Logic for running the Cracker program"""
 
-    SPEAKER = {"Polly": Polly, "Espeak": Espeak}
+    SPEAKER = {Polly.__name__: Polly, Espeak.__name__: Espeak}
     _logger = logging.getLogger(__name__)
 
     def __init__(self):
@@ -23,7 +23,7 @@ class Cracker(object):
         _ = self.config.read_default_config()
 
         self.player = QMediaPlayer()
-        self.speaker = self.SPEAKER[self.config.speaker](self.player)
+        self.speaker = self.get_speaker(self.config.speaker, self.player)
         self.textParser = TextParser()
 
         self.gui = MainWindow(self.config, speakers=self.SPEAKER)
@@ -31,6 +31,16 @@ class Cracker(object):
         self.gui.player = self.player
 
         self._last_pid = None
+
+    def get_speaker(self, speaker_name, player):
+        if speaker_name == Polly.__name__:
+            if "profile_name" in self.config.default_values:
+                profile_name = self.config.default_values['profile_name']
+                return Polly(player, profile_name)
+            else:
+                return Polly(player)
+        elif speaker_name == Espeak.__name__:
+            return Espeak(player)
 
     def run(self):
         self.gui.init()

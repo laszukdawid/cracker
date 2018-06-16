@@ -2,31 +2,41 @@ import configparser
 import json
 
 class Configuration(object):
+    """Holds configuration values for the application."""
 
     language_file = "voices.json"
     DEFAULT_CONFIG_PATH = "default_setting.ini"
 
     def __init__(self):
         self.languages = []
-        self.default_config = {}
+        self.default_values = {}  # Additional values
+
+        self.speaker = None
+        self.language = None
+        self.voice = None
+        self.voices = []
+        self.speed = None
 
     def read_default_config(self):
-        default_config = configparser.ConfigParser()
-        default_config.read(self.DEFAULT_CONFIG_PATH)
+        configuration = configparser.ConfigParser()
+        configuration.read(self.DEFAULT_CONFIG_PATH)
 
-        default_values = default_config['Default']
+        default_config = configuration['Default']
         config = {}
-        config['speaker'] = self.speaker = default_values['speaker']
-        config['language'] = self.language = default_values['language']
-        config['speed'] = self.speed = int(default_values['speed'])
-        config['voice'] = self.voice = default_config['Default'+self.speaker]['Voice']
+        config['speaker'] = self.speaker = default_config['speaker']
+        config['language'] = self.language = default_config['language']
+        config['speed'] = self.speed = int(default_config['speed'])
+        config['voice'] = self.voice = configuration['Default'+self.speaker]['Voice']
 
         speaker_config = self.load_config(self.speaker, self.language)
         config.update(speaker_config)
 
+        # Check for different than default AWS profile_name
+        if self.speaker == "Polly" and "profile_name" in configuration['DefaultPolly']:
+            self.default_values['profile_name'] = configuration['DefaultPolly']['profile_name']
+
         if self.voice not in self.lang_voices:
             config['voice'] = self.voice = self.lang_voices[0]
-        self.default_config.update(config)
         return config
 
     def load_config(self, speaker, language=None):
@@ -39,6 +49,7 @@ class Configuration(object):
 
         if self.voice not in self.lang_voices:
             config['voice'] = self.voice = self.lang_voices[0]
+
         return config
 
     def load_languages(self, speaker):
