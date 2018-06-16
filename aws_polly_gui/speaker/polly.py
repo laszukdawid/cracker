@@ -11,14 +11,16 @@ from .abstract_speaker import AbstractSpeaker
 
 
 class Polly(AbstractSpeaker):
+    """Interface for communcation with AWS Polly"""
 
     _logger = logging.getLogger(__name__)
 
     RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
 
-    def __init__(self, player):
-        self.client = boto3.client('polly')
+    def __init__(self, player, profile_name="default"):
+        session = boto3.Session(profile_name=profile_name)
+        self.client = session.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
         self._cached_voice = ""
@@ -56,6 +58,7 @@ class Polly(AbstractSpeaker):
         return
 
     def ask_polly(self, ssml_text, voice):
+        """Connects to Polly and returns path to save mp3"""
         speech = self.create_speech(ssml_text, voice)
         response = self.client.synthesize_speech(**speech)
         filepath = self.save_mp3(response)
@@ -63,6 +66,7 @@ class Polly(AbstractSpeaker):
 
     @staticmethod
     def create_speech(ssml_text, voice):
+        """Prepares speech query to Polly"""
         return dict(
             OutputFormat='mp3',
             TextType='ssml',
