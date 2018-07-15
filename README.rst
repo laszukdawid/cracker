@@ -16,6 +16,7 @@ Package is currently heavily favouring Ubuntu as end OS. If you are one of the l
 
 For other OS you'd need *PyQt5* and *vlc*. 
 
+If you're on Ubuntu you'll most likely need additional `gstreamer` packages. Otherwise you'll see something like `defaultServiceProvider::requestService(): no service found for - "org.qt-project.qt.mediaplayer"`.
 
 Usage
 =====
