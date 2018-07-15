@@ -22,11 +22,10 @@ class Polly(AbstractSpeaker):
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
 
     def __init__(self, player, profile_name="default"):
-        session = boto3.Session(profile_name=profile_name)
-        self.client = session.client('polly')
         self._cached_ssml = SSML()
         self._cached_filepath = ""
         self._cached_voice = ""
+        self._connect_aws(profile_name)
         self.player = player
 
     def __del__(self):
@@ -34,6 +33,14 @@ class Polly(AbstractSpeaker):
             os.remove(self._cached_filepath)
         except (OSError, TypeError):
             pass
+
+    def _connect_aws(self, profile_name):
+        try:
+            session = boto3.Session(profile_name=profile_name)
+            self.client = session.client('polly')
+        except:
+            self._logger.error("Unable to connect to AWS with the profile '%s'. " \
+                    "Please verify that configuration file exists.", profile_name)
 
     def save_cache(self, ssml, filepaths, voice):
         self._cached_ssml = ssml
@@ -59,8 +66,6 @@ class Polly(AbstractSpeaker):
             filepaths = []
             # TODO: This should obviously be asynchronous!
             for idx, parted_text in enumerate(split_text):
-                print(parted_text)
-                print("Sending text of {} length".format(len(parted_text)))
                 parted_ssml = SSML(parted_text, rate=rate, volume=volume)
                 response = self.ask_polly(str(parted_ssml), voice)
                 filepath = save_mp3(response["AudioStream"].read(), AbstractSpeaker.TMP_FILEPATH, idx)
