@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # coding: UTF-8
+import json
 import logging
 from PyQt5.QtMultimedia import QMediaPlayer
 
@@ -24,7 +25,7 @@ class Cracker(object):
 
         self.player = QMediaPlayer()
         self.speaker = self.get_speaker(self.config.speaker, self.player)
-        self.textParser = TextParser()
+        self.textParser = TextParser(config_path=self.config.parser_config)
 
         self.gui = MainWindow(self.config, speakers=self.SPEAKER)
         self.gui.speaker = self.speaker
@@ -46,6 +47,15 @@ class Cracker(object):
         self.gui.init()
         self.set_action()
         self.gui.show()
+
+    def refresh_reduce_rules(self):
+        """From provided path to a config it extracts configuration for the TextParser"""
+        try:
+            with open(self.config.parser_config) as f:
+                self.textParser.config = json.loads(f.read())
+        except Exception as e:
+            print("While reading config", e)
+            self._logger.error(e)
 
     def reduce_text(self):
         text = self.gui.textEdit.toPlainText()
@@ -69,6 +79,7 @@ class Cracker(object):
         """Reads out text in the text_box with selected speaker."""
         self.stop_text()
         text = self.gui.textEdit.toPlainText()  # TODO: toHtml() gives more control
+        text = self.textParser.reduce_text(text)
         speaker_config = self._prepare_config()
         self._last_pid = self.speaker.read_text(text, **speaker_config)
 
@@ -96,6 +107,7 @@ class Cracker(object):
         self.gui.stop_action.triggered.connect(self.stop_text)
         self.gui.read_action.triggered.connect(self.read_text)
         self.gui.toggle_action.triggered.connect(self.toggle_read)
+        self.gui.refresh_action.triggered.connect(self.refresh_reduce_rules)
         self.gui.reduce_action.triggered.connect(self.reduce_text)
         self.gui.wiki_action.triggered.connect(self.wiki_text)
         self.gui.cite_action.triggered.connect(self.reduce_cite)

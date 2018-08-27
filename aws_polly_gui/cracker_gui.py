@@ -50,6 +50,10 @@ class MainWindow(QMainWindow):
         self.toggle_action.setStatusTip('Toggle read')
         self.player.stateChanged.connect(self.toggle_label)
 
+        self.refresh_action = QAction('Refresh', self)
+        self.refresh_action.setShortcut('Ctrl+Alt+R')
+        self.refresh_action.setStatusTip('Reduces unnecessary text')
+
         self.reduce_action = QAction('Reduce', self)
         self.reduce_action.setShortcut('Ctrl+R')
         self.reduce_action.setStatusTip('Reduces unnecessary text')
@@ -82,6 +86,7 @@ class MainWindow(QMainWindow):
         toolbarText.addAction(self.stop_action)
         toolbarText.addAction(self.toggle_action)
         toolbarReduce = self.addToolBar('Reduce')
+        toolbarReduce.addAction(self.refresh_action)
         toolbarReduce.addAction(self.reduce_action)
         toolbarReduce.addAction(self.wiki_action)
         toolbarReduce.addAction(self.cite_action)
