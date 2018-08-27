@@ -1,27 +1,67 @@
 import html
+import json
+import logging
 import re
+
+from collections import OrderedDict
 
 
 class TextParser:
 
+    _logger = logging.getLogger(__name__)
+
     citation_author_year = re.compile(r'[\(\[]\w+, \d{4}(;\s\w+, \d{4})*[\)\]]')
     citation_numbers_comma = re.compile(r'\[\d+(,\s*\d+)*\]')
+
+    # TODO: There shoudldn't be both `config_path` and `config`
+    def __init__(self, config=None, config_path=None):
+
+        self._config = None
+        self._regex_rules = OrderedDict()
+        self._logger.info("Init")
+
+        # Check that this is a file
+        if self._config is None and config_path is not None:
+            self.config = self.read_config_path(config_path)
+
+    @property
+    def config(self):
+        return self._config
+
+    @config.setter
+    def config(self, config):
+        self._config = config
+        self.update_config()
+
+    def read_config_path(self, config_path):
+        """From provided path to a config it extracts configuration for the TextParser"""
+        print("here here")
+        self._logger.info("parsing read config path")
+
+        config = None
+        # TODO: There should be a check whether file exists
+        with open(config_path) as f:
+            config = json.loads(f.read())
+        return config
+
+    def update_config(self):
+        """Goes through the config and extracts regex rules."""
+        if self.config is None:
+            return
+
+        # Clears all regex rules
+        self._regex_rules.clear()
+
+        for rule in self.config["parser_rules"]:
+            if not rule['active']: continue
+            print("parsing rule %s", rule['name'])
+            self._regex_rules[rule['key']] = rule['value']
 
     @classmethod
     def reduce_cite(cls, text):
         """Removes citations from pasted text."""
         text = cls.citation_numbers_comma.sub("", text)
         text = cls.citation_author_year.sub("", text)
-        return text
-
-    @staticmethod
-    def reduce_text(text):
-        """Simplify text to strings only."""
-        text = re.sub(r'-\n', '', text, re.U)
-        text = re.sub(r'- ', '', text, re.U)
-        text = re.sub(r"'", '', text)
-        text = re.sub(r'\t', ' ', text)
-        text = re.sub(r'\n', ' ', text)
         return text
 
     @staticmethod
@@ -45,3 +85,13 @@ class TextParser:
     @staticmethod
     def escape_tags(text):
         return html.escape(text, quote=False)
+
+    def reduce_text(self, text):
+        # For each method process text
+        print("Received:")
+        print(text)
+        for key, value in self._regex_rules.items():
+            text = re.sub(key, value, text)
+        print("Output:")
+        print(text)
+        return text

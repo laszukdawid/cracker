@@ -23,6 +23,7 @@ class Configuration(object):
 
         default_config = configuration['Default']
         config = {}
+        config['parser_config'] = self.parser_config = default_config['parser_config']
         config['speaker'] = self.speaker = default_config['speaker']
         config['language'] = self.language = default_config['language']
         config['speed'] = self.speed = int(default_config['speed'])
