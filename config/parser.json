@@ -19,6 +19,12 @@
       "value": ""
     },
     {
+      "name": "extensive_new_line",
+      "active": true,
+      "key": "\\n\\s*?(?=[a-z])",
+      "value": " "
+    },
+    {
       "name": "hypthened_new_line",
       "active": true,
       "key": "-\\n",
