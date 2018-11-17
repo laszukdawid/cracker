@@ -7,6 +7,7 @@ from aws_polly_gui.cracker import Cracker
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setApplicationName('Cracker')
     cracker = Cracker()
     cracker.run()
     sys.exit(app.exec_())
