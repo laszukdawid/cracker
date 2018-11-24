@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
 from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QGridLayout, QLabel, QSpinBox, QSlider, QTextEdit
 from PyQt5.QtMultimedia import QMediaPlayer
 
+from .View.config_window import ConfigWindow
+
 
 class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
@@ -24,10 +26,14 @@ class MainWindow(QMainWindow):
         self.speaker = None
         self.player = None
 
+        self.config_window = ConfigWindow()
+
     def init(self):
         self.set_action()
         self.set_widgets()
         self.init_values()
+        print("Init")
+        self.config_window.init(regex_file_path=self.config.parser_config)
 
     def set_action(self):
         _exit = QAction('Exit', self)
@@ -66,6 +72,10 @@ class MainWindow(QMainWindow):
         self.cite_action.setShortcut('Ctrl+Shift+C')
         self.cite_action.setStatusTip('Citation')
 
+        self.toggle_config_window = QAction('Config', self)
+        self.toggle_config_window.setStatusTip('Opens configuration')
+        self.toggle_config_window.triggered.connect(self.config_window.show)
+
         # MenuBar and ToolBar
         menubar = self.menuBar()
 
@@ -90,6 +100,9 @@ class MainWindow(QMainWindow):
         toolbarReduce.addAction(self.reduce_action)
         toolbarReduce.addAction(self.wiki_action)
         toolbarReduce.addAction(self.cite_action)
+
+        toolbarConfig = self.addToolBar('Config')
+        toolbarConfig.addAction(self.toggle_config_window)
 
     def set_widgets(self):
         # todo: This should be a grid
