@@ -3,19 +3,27 @@ import json
 
 class Configuration(object):
     """Holds configuration values for the application."""
-
+    singleton = None  
+   
     language_file = "voices.json"
     DEFAULT_CONFIG_PATH = "default_setting.ini"
 
-    def __init__(self):
-        self.languages = []
-        self.default_values = {}  # Additional values
+    languages = []
+    default_values = {}  # Additional values
 
-        self.speaker = None
-        self.language = None
-        self.voice = None
-        self.voices = []
-        self.speed = None
+    speaker = None
+    language = None
+    voice = None
+    voices = []
+    speed = None
+
+    regex_config = None
+
+
+    def __new__(cls, *args, **kwargs):  
+        if not cls.singleton:  
+            cls.singleton = object.__new__(Configuration)  
+        return cls.singleton  
 
     def read_default_config(self):
         configuration = configparser.ConfigParser()
@@ -38,6 +46,10 @@ class Configuration(object):
 
         if self.voice not in self.lang_voices:
             config['voice'] = self.voice = self.lang_voices[0]
+
+        if self.parser_config is not None:
+            self.regex_config = self.load_regex_config()
+
         return config
 
     def load_config(self, speaker, language=None):
@@ -59,3 +71,14 @@ class Configuration(object):
             lang_map = json.loads(json_file.read())
         return lang_map[speaker]["Languages"]
 
+    def load_regex_config(self):
+        """From provided path to a config it extracts configuration for the TextParser"""
+        regex_config = None
+        try:
+            with open(self.parser_config) as f:
+                regex_config = json.loads(f.read())["parser_rules"]
+        except Exception as e:
+            print("While reading config", e)
+            self._logger.error(e)
+
+        return regex_config

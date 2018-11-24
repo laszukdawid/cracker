@@ -17,6 +17,7 @@ class TextParser:
     def __init__(self, config=None, config_path=None):
 
         self._config = None
+        self._parser_rules = None
         self._regex_rules = OrderedDict()
         self._logger.info("Init")
 
@@ -32,10 +33,18 @@ class TextParser:
     def config(self, config):
         self._config = config
         self.update_config()
+    
+    @property
+    def parser_rules(self):
+        return self._parser_rules
+    
+    @parser_rules.setter
+    def parser_rules(self, parser_rules):
+        self._config["parser_rules"] = parser_rules
+        self.update_config()
 
     def read_config_path(self, config_path):
         """From provided path to a config it extracts configuration for the TextParser"""
-        print("here here")
         self._logger.info("parsing read config path")
 
         config = None
@@ -54,7 +63,6 @@ class TextParser:
 
         for rule in self.config["parser_rules"]:
             if not rule['active']: continue
-            print("parsing rule %s", rule['name'])
             self._regex_rules[rule['key']] = rule['value']
 
     @classmethod
@@ -88,10 +96,6 @@ class TextParser:
 
     def reduce_text(self, text):
         # For each method process text
-        print("Received:")
-        print(text)
         for key, value in self._regex_rules.items():
             text = re.sub(key, value, text)
-        print("Output:")
-        print(text)
         return text
