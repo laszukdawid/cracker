@@ -2,9 +2,10 @@ import logging
 import os
 import subprocess
 
-from .abstract_speaker import AbstractSpeaker
 from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent
+
+from .abstract_speaker import AbstractSpeaker
 
 
 class Espeak(AbstractSpeaker):

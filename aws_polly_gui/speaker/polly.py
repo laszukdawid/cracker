@@ -1,16 +1,15 @@
-import html
 import logging
 import os
 
 import boto3
 from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent
-from PyQt5.QtMultimedia import QMediaPlaylist
+from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
-from aws_polly_gui.text_parser import TextParser
-from aws_polly_gui.ssml import SSML
-from .abstract_speaker import AbstractSpeaker
 from aws_polly_gui.mp3_helper import save_mp3
+from aws_polly_gui.ssml import SSML
+from aws_polly_gui.text_parser import TextParser
+
+from .abstract_speaker import AbstractSpeaker
 
 
 class Polly(AbstractSpeaker):

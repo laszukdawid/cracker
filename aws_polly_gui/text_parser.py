@@ -2,7 +2,6 @@ import html
 import json
 import logging
 import re
-
 from collections import OrderedDict
 
 
