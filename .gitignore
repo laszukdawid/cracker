@@ -1,2 +1,11 @@
 *.pyc
-__pycache__
+__pycache__/
+.venv/
+
+*.egg-info/
+dist/
+
+*.mp3
+
+.cache/
+.vscode/

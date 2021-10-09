@@ -6,6 +6,15 @@ Usable GUI for AWS Polly text-to-speech service.
 Installation
 ============
 
+It should be enough to checkout this package and install it's dependencies with `pip`
+
+.. code-block:: bash
+    
+    $ pip install -e .
+
+Old instructions but might be necessary
+---------------------------------------
+
 *PyQt5* is used to display GUI. To install PyQt5 head off to their `installation page <http://pyqt.sourceforge.net/Docs/PyQt5/installation.html>`_.
 Package is currently heavily favouring Ubuntu as end OS. If you are one of the lucky ones then the installation requires:
 
