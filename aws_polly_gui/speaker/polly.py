@@ -5,7 +5,7 @@ import boto3
 from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
-from aws_polly_gui.mp3_helper import save_mp3
+from aws_polly_gui.mp3_helper import create_filename, save_mp3
 from aws_polly_gui.ssml import SSML
 from aws_polly_gui.text_parser import TextParser
 
@@ -68,8 +68,9 @@ class Polly(AbstractSpeaker):
             for idx, parted_text in enumerate(split_text):
                 parted_ssml = SSML(parted_text, rate=rate, volume=volume)
                 response = self.ask_polly(str(parted_ssml), voice)
-                filepath = save_mp3(response["AudioStream"].read(), AbstractSpeaker.TMP_FILEPATH, idx)
-                filepaths.append(filepath)
+                filename = create_filename(AbstractSpeaker.TMP_FILEPATH, idx)
+                saved_filepath = save_mp3(response["AudioStream"].read(), filename)
+                filepaths.append(saved_filepath)
             self.save_cache(ssml, filepaths, voice)
         self.play_files(filepaths)
         return

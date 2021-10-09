@@ -54,7 +54,7 @@ class TestTextParser(unittest.TestCase):
         split_text = list(TextParser.split_text(document))
         self.assertEqual(len(split_text), 2, "Two parts")
 
-    def test_split_text_above_3000_below_6000(self):
+    def test_split_text_above_6000(self):
         document = "no dots in this text "*300  # 21*300 = 6300
         self.assertEqual(len(document), 6300, "Document should have 6300 chars length")
 
