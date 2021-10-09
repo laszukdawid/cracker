@@ -1,10 +1,11 @@
 #!/usr/bin/python
 # coding: UTF-8
 import logging
+
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QAction, QMainWindow, QWidget
-from PyQt5.QtWidgets import QComboBox, QVBoxLayout, QGridLayout, QLabel, QSpinBox, QSlider, QTextEdit
 from PyQt5.QtMultimedia import QMediaPlayer
+from PyQt5.QtWidgets import (QAction, QComboBox, QGridLayout, QLabel, QMainWindow, QSlider, QSpinBox, QTextEdit,
+                             QVBoxLayout, QWidget)
 
 from .View.config_window import ConfigWindow
 
@@ -32,7 +33,6 @@ class MainWindow(QMainWindow):
         self.set_action()
         self.set_widgets()
         self.init_values()
-        print("Init")
         self.config_window.init(regex_file_path=self.config.parser_config)
 
     def set_action(self):

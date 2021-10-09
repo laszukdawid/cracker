@@ -1,6 +1,7 @@
 import configparser
 import json
 
+
 class Configuration(object):
     """Holds configuration values for the application."""
     singleton = None  

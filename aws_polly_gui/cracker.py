@@ -1,14 +1,14 @@
 #!/usr/bin/python
 # coding: UTF-8
-import json
 import logging
+
 from PyQt5.QtMultimedia import QMediaPlayer
 
 from aws_polly_gui.configuration import Configuration
 from aws_polly_gui.cracker_gui import MainWindow
-from aws_polly_gui.text_parser import TextParser
 from aws_polly_gui.speaker.espeak import Espeak
 from aws_polly_gui.speaker.polly import Polly
+from aws_polly_gui.text_parser import TextParser
 
 
 class Cracker(object):
