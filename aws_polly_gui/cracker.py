@@ -6,6 +6,7 @@ from PyQt5.QtMultimedia import QMediaPlayer
 
 from aws_polly_gui.configuration import Configuration
 from aws_polly_gui.cracker_gui import MainWindow
+from aws_polly_gui.speaker.abstract_speaker import AbstractSpeaker
 from aws_polly_gui.speaker.espeak import Espeak
 from aws_polly_gui.speaker.polly import Polly
 from aws_polly_gui.text_parser import TextParser
@@ -24,7 +25,7 @@ class Cracker(object):
         _ = self.config.read_default_config()
 
         self.player = QMediaPlayer()
-        self.speaker = self.get_speaker(self.config.speaker, self.player)
+        self.speaker: AbstractSpeaker = self.get_speaker(self.config.speaker, self.player)
         self.textParser = TextParser(config_path=self.config.parser_config)
 
         self.gui = MainWindow(self.config, speakers=self.SPEAKER)
@@ -33,7 +34,7 @@ class Cracker(object):
 
         self._last_pid = None
 
-    def get_speaker(self, speaker_name, player):
+    def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         if speaker_name == Polly.__name__:
             if "profile_name" in self.config.default_values:
                 profile_name = self.config.default_values['profile_name']
@@ -42,6 +43,7 @@ class Cracker(object):
                 return Polly(player)
         elif speaker_name == Espeak.__name__:
             return Espeak(player)
+        raise ValueError(f"No speaker was selected. Provided speaker name '{speaker_name}'")
 
     def run(self):
         self.gui.init()

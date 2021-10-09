@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 CACHE_PATH = os.path.expanduser(r"~/.cache/cracker")
 try:
@@ -7,7 +8,7 @@ except:
     pass
 
 
-def create_filename(base_filename, idx=None):
+def create_filename(base_filename: str, idx: Optional[int]=None) -> str:
     "Helper function to index file without losing extension"
     if idx is not None:
         filename = '-{}.'.format(idx).join(base_filename.rsplit('.', 1))
@@ -16,7 +17,7 @@ def create_filename(base_filename, idx=None):
         return base_filename
 
 
-def save_mp3(mp3_stream, base_filename) -> str:
+def save_mp3(mp3_stream, base_filename: str) -> str:
     """Stores downloaded response as an mp3.
     
     Returns path to location where the mp3 is stored.

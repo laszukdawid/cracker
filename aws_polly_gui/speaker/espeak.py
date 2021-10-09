@@ -25,7 +25,7 @@ class Espeak(AbstractSpeaker):
     def __del__(self):
         self.stop_text()
 
-    def read_text(self, text, **config):
+    def read_text(self, text: str, **config) -> None:
         filepath = os.path.abspath(AbstractSpeaker.TMP_FILEPATH)
         command = ["espeak"]
         command += self._process_config(**config)
