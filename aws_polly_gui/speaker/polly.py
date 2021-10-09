@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import List
 
 import boto3
 from PyQt5.QtCore import QUrl
@@ -33,7 +34,7 @@ class Polly(AbstractSpeaker):
         except (OSError, TypeError):
             pass
 
-    def _connect_aws(self, profile_name):
+    def _connect_aws(self, profile_name: str):
         try:
             session = boto3.Session(profile_name=profile_name)
             self.client = session.client('polly')
@@ -42,20 +43,22 @@ class Polly(AbstractSpeaker):
                     "Please verify that configuration file exists.", profile_name)
             raise e
 
-    def save_cache(self, ssml, filepaths, voice):
+    def save_cache(self, ssml: SSML, filepaths: List[str], voice):
         self._cached_ssml = ssml
         self._cached_filepaths = filepaths
         self._cached_voice = voice
 
-    def read_text(self, text, **config):
+    def read_text(self, text: str, **config) -> None:
         """Reads out text."""
         text = self.clean_text(text)
         text = TextParser.escape_tags(text)
         split_text = TextParser.split_text(text)
 
-        voice = config['voice'] if 'voice' in config else None
-        rate = config['rate'] if 'rate' in config else None
-        volume = config['volume'] if 'volume' in config else None
+        rate = config.get('rate')
+        volume = config.get('volume')
+        voice = config.get('voice')
+        assert voice, "Voice needs to be provided"  # TODO: Does it?
+
         ssml = SSML(text, rate=rate, volume=volume)
 
         if self._cached_ssml == ssml and self._cached_voice == voice:
@@ -75,14 +78,14 @@ class Polly(AbstractSpeaker):
         self.play_files(filepaths)
         return
 
-    def ask_polly(self, ssml_text, voice):
+    def ask_polly(self, ssml_text: str, voice: str):
         """Connects to Polly and returns path to save mp3"""
         speech = self.create_speech(ssml_text, voice)
         response = self.client.synthesize_speech(**speech)
         return response
 
     @staticmethod
-    def create_speech(ssml_text, voice):
+    def create_speech(ssml_text: str, voice: str):
         """Prepares speech query to Polly"""
         return dict(
             OutputFormat='mp3',
@@ -99,5 +102,5 @@ class Polly(AbstractSpeaker):
         self.player.setPlaylist(playlist)
         self.player.play()
 
-    def stop_text(self):
+    def stop_text(self) -> None:
         self.player.stop()

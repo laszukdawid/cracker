@@ -79,7 +79,6 @@ class Configuration(object):
             with open(self.parser_config) as f:
                 regex_config = json.loads(f.read())["parser_rules"]
         except Exception as e:
-            print("While reading config", e)
-            self._logger.error(e)
+            self._logger.exception("While reading config")
 
         return regex_config

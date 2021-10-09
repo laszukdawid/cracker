@@ -1,7 +1,8 @@
+import abc
 import re
 
 
-class AbstractSpeaker(object):
+class AbstractSpeaker(abc.ABC):
     """
     Abstract class for all `Speaker` classes.
 
@@ -15,10 +16,12 @@ class AbstractSpeaker(object):
                      (re.compile(r'&'), 'and'),
                     ]
 
-    def read_text(self, text, **config):
+    @abc.abstractmethod
+    def read_text(self, text: str, **config) -> None:
         return NotImplementedError("Class %s doesn't implement `read_text()`" % self.__class__.__name__)
 
-    def stop_text(self):
+    @abc.abstractmethod
+    def stop_text(self) -> None:
         return NotImplementedError("Class %s doesn't implement `stop_text()`" % self.__class__.__name__)
 
     @classmethod
