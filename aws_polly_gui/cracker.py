@@ -1,11 +1,14 @@
 #!/usr/bin/python
 # coding: UTF-8
 import logging
+from threading import Thread
 
 from PyQt5.QtMultimedia import QMediaPlayer
+from PyQt5.QtWidgets import QApplication
 
 from aws_polly_gui.configuration import Configuration
 from aws_polly_gui.cracker_gui import MainWindow
+from aws_polly_gui.keylogger import KeyBoardManager
 from aws_polly_gui.speaker.abstract_speaker import AbstractSpeaker
 from aws_polly_gui.speaker.espeak import Espeak
 from aws_polly_gui.speaker.polly import Polly
@@ -18,8 +21,9 @@ class Cracker(object):
     SPEAKER = {Polly.__name__: Polly, Espeak.__name__: Espeak}
     _logger = logging.getLogger(__name__)
 
-    def __init__(self):
+    def __init__(self, app: QApplication):
         super().__init__()
+        self.app = app
 
         self.config = Configuration()
         _ = self.config.read_default_config()
@@ -78,7 +82,18 @@ class Cracker(object):
 
         speaker_config = self._prepare_config()
         self._last_pid = self.speaker.read_text(text, **speaker_config)
+    
+    def read_clipboard(self):
+        """Reads out text in the text_box with selected speaker."""
+        self.stop_text()
+        text = self.app.clipboard().text()
 
+        self.textParser.parser_rules = self.config.regex_config
+        text = self.textParser.reduce_text(text)
+
+        speaker_config = self._prepare_config()
+        self._last_pid = self.speaker.read_text(text, **speaker_config)
+    
     def toggle_read(self):
         if self.player.state() == QMediaPlayer.PausedState:
             self.player.play()
@@ -102,7 +117,15 @@ class Cracker(object):
     def set_action(self):
         self.gui.stop_action.triggered.connect(self.stop_text)
         self.gui.read_action.triggered.connect(self.read_text)
+        self.gui.c_read_action.triggered.connect(self.read_clipboard)
         self.gui.toggle_action.triggered.connect(self.toggle_read)
         self.gui.reduce_action.triggered.connect(self.reduce_text)
         self.gui.wiki_action.triggered.connect(self.wiki_text)
         self.gui.speakerW.currentTextChanged.connect(self.change_speaker)
+
+        key_manager = KeyBoardManager(self.app)
+        key_manager.GlobalReadSignal.connect(self.read_clipboard)
+
+        args = (['space', 'control', 'shift'], )
+        p = Thread(target=key_manager.run, args=args)
+        p.start()
