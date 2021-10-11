@@ -36,7 +36,16 @@ class Cracker(object):
         self.gui.speaker = self.speaker
         self.gui.player = self.player
 
+        self.key_manager = KeyBoardManager(self.app)
+
+        # Event on closing GUI application
+        self.gui.closeAppEvent.connect(self._close)
+
         self._last_pid = None
+    
+    def _close(self):
+        "Handles closing whole application"
+        self.key_manager.stop()
 
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         if speaker_name == Polly.__name__:
@@ -123,9 +132,8 @@ class Cracker(object):
         self.gui.wiki_action.triggered.connect(self.wiki_text)
         self.gui.speakerW.currentTextChanged.connect(self.change_speaker)
 
-        key_manager = KeyBoardManager(self.app)
-        key_manager.GlobalReadSignal.connect(self.read_clipboard)
+        self.key_manager.GlobalReadSignal.connect(self.read_text_clipboard)
 
         args = (['space', 'control', 'shift'], )
-        p = Thread(target=key_manager.run, args=args)
+        p = Thread(target=self.key_manager.run, args=args)
         p.start()
