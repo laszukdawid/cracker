@@ -81,25 +81,25 @@ class Cracker(object):
         text = self.textParser.wiki_text(text)
         self.gui.textEdit.setText(text)
 
-    def read_text(self):
+    def read_text_area(self):
         """Reads out text in the text_box with selected speaker."""
         self.stop_text()
         text = self.gui.textEdit.toPlainText()  # TODO: toHtml() gives more control
 
         self.textParser.parser_rules = self.config.regex_config
         text = self.textParser.reduce_text(text)
-
-        speaker_config = self._prepare_config()
-        self._last_pid = self.speaker.read_text(text, **speaker_config)
+        self._read(text)
     
-    def read_clipboard(self):
-        """Reads out text in the text_box with selected speaker."""
+    def read_text_clipboard(self):
+        """Reads out text from the clipboard with selected speaker."""
         self.stop_text()
         text = self.app.clipboard().text()
 
         self.textParser.parser_rules = self.config.regex_config
         text = self.textParser.reduce_text(text)
+        self._read(text)
 
+    def _read(self, text):
         speaker_config = self._prepare_config()
         self._last_pid = self.speaker.read_text(text, **speaker_config)
     
@@ -125,8 +125,8 @@ class Cracker(object):
 
     def set_action(self):
         self.gui.stop_action.triggered.connect(self.stop_text)
-        self.gui.read_action.triggered.connect(self.read_text)
-        self.gui.c_read_action.triggered.connect(self.read_clipboard)
+        self.gui.read_action.triggered.connect(self.read_text_area)
+        self.gui.clipboard_read_action.triggered.connect(self.read_text_clipboard)
         self.gui.toggle_action.triggered.connect(self.toggle_read)
         self.gui.reduce_action.triggered.connect(self.reduce_text)
         self.gui.wiki_action.triggered.connect(self.wiki_text)

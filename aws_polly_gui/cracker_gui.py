@@ -46,9 +46,9 @@ class MainWindow(QMainWindow):
         self.stop_action.setShortcut('Ctrl+Shift+S')
         self.stop_action.setStatusTip('Stops text')
 
-        self.c_read_action = QAction('Read (clipboard)', self)
-        self.c_read_action.setShortcut('Ctrl+Shift+Space')
-        self.c_read_action.setStatusTip('Reads text from clipboard')
+        self.clipboard_read_action = QAction('Read (clipboard)', self)
+        self.clipboard_read_action.setShortcut('Ctrl+Shift+Space')
+        self.clipboard_read_action.setStatusTip('Reads text from clipboard')
 
         # TODO: This, and above, should be buttons, so that the width doesn't change
         self.toggle_action = QAction('Pause', self)
@@ -83,17 +83,17 @@ class MainWindow(QMainWindow):
         fileAction = menubar.addMenu('&File')
         fileAction.addAction(_exit)
         textAction = menubar.addMenu('&Text')
-        textAction.addAction(self.c_read_action)
+        textAction.addAction(self.clipboard_read_action)
         textAction.addAction(self.stop_action)
         reduceAction = menubar.addMenu('&Reduce')
         reduceAction.addAction(self.reduce_action)
         reduceAction.addAction(self.wiki_action)
         reduceAction.addAction(self.cite_action)
 
-        toolbarExit = self.addToolBar('Exit')
-        toolbarExit.addAction(_exit)
+        # toolbarExit = self.addToolBar('Exit')
+        # toolbarExit.addAction(_exit)
         toolbarText = self.addToolBar('Text')
-        toolbarText.addAction(self.c_read_action)
+        toolbarText.addAction(self.clipboard_read_action)
         toolbarText.addAction(self.stop_action)
         toolbarText.addAction(self.toggle_action)
         toolbarReduce = self.addToolBar('Reduce')
@@ -209,11 +209,18 @@ class MainWindow(QMainWindow):
         if QMediaPlayer.PlayingState == state:
             self.toggle_action.setText("Pause")
             self.toggle_action.setDisabled(False)
+            self.stop_action.setDisabled(False)
+            self.read_action.setDisabled(True)
+            self.clipboard_read_action.setDisabled(True)
         elif QMediaPlayer.StoppedState == state:
             self.toggle_action.setText("Pause")
             self.toggle_action.setDisabled(True)
+            self.stop_action.setDisabled(True)
+            self.read_action.setDisabled(False)
+            self.clipboard_read_action.setDisabled(False)
         elif QMediaPlayer.PausedState == state:
             self.toggle_action.setText("Resume")
+            self.stop_action.setDisabled(False)
             self.toggle_action.setDisabled(False)
         else:
             self._logger.error("Unrecognisible state '%s' in MediaPlayer", state)
