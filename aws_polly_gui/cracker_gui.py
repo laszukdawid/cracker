@@ -2,7 +2,7 @@
 # coding: UTF-8
 import logging
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtWidgets import (QAction, QComboBox, QGridLayout, QLabel, QMainWindow, QSlider, QSpinBox, QTextEdit,
                              QVBoxLayout, QWidget)
@@ -14,6 +14,7 @@ class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
 
     _logger = logging.getLogger(__name__)
+    closeAppEvent = pyqtSignal()
 
     def __init__(self, config, speakers):
         super().__init__()
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
         _exit = QAction('Exit', self)
         _exit.setShortcut('Ctrl+Q')
         _exit.setStatusTip('Exit application')
-        _exit.triggered.connect(self.close)
+        _exit.triggered.connect(self.closeEvent)
 
         self.stop_action = QAction('Stop', self)
         self.stop_action.setShortcut('Ctrl+Shift+S')
@@ -173,7 +174,9 @@ class MainWindow(QMainWindow):
         self.change_language(self.config.language)
 
     def closeEvent(self, close_event):
+        self.closeAppEvent.emit()
         self.speaker.__del__()
+        self.close()
 
     def change_speaker(self, speaker_name):
         """Action on changing speaker.
