@@ -6,13 +6,13 @@ from threading import Thread
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtWidgets import QApplication
 
-from aws_polly_gui.configuration import Configuration
-from aws_polly_gui.cracker_gui import MainWindow
-from aws_polly_gui.keylogger import KeyBoardManager
-from aws_polly_gui.speaker.abstract_speaker import AbstractSpeaker
-from aws_polly_gui.speaker.espeak import Espeak
-from aws_polly_gui.speaker.polly import Polly
-from aws_polly_gui.text_parser import TextParser
+from cracker.configuration import Configuration
+from cracker.cracker_gui import MainWindow
+from cracker.keylogger import KeyBoardManager
+from cracker.speaker.abstract_speaker import AbstractSpeaker
+from cracker.speaker.espeak import Espeak
+from cracker.speaker.polly import Polly
+from cracker.text_parser import TextParser
 
 
 class Cracker(object):

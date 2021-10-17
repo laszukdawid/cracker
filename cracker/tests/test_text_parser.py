@@ -1,7 +1,7 @@
 import types
 import unittest
 
-from aws_polly_gui.text_parser import TextParser
+from cracker.text_parser import TextParser
 
 
 class TestTextParser(unittest.TestCase):

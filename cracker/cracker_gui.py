@@ -46,6 +46,10 @@ class MainWindow(QMainWindow):
         self.stop_action.setShortcut('Ctrl+Shift+S')
         self.stop_action.setStatusTip('Stops text')
 
+        self.read_action = QAction('Read', self)
+        self.read_action.setShortcut('Ctrl+Shift+R')
+        self.read_action.setStatusTip('Reduces provided text')
+
         self.clipboard_read_action = QAction('Read (clipboard)', self)
         self.clipboard_read_action.setShortcut('Ctrl+Shift+Space')
         self.clipboard_read_action.setStatusTip('Reads text from clipboard')
@@ -57,16 +61,12 @@ class MainWindow(QMainWindow):
         self.toggle_action.setStatusTip('Toggle read')
         self.player.stateChanged.connect(self.toggle_label)
 
-        self.read_action = QAction('Read', self)
-        self.read_action.setShortcut('Ctrl+Alt+R')
-        self.read_action.setStatusTip('Reduces provided text')
-
         self.reduce_action = QAction('Reduce', self)
         self.reduce_action.setShortcut('Ctrl+R')
         self.reduce_action.setStatusTip('Reduces unnecessary text')
 
         self.wiki_action = QAction('Wiki', self)
-        self.wiki_action.setShortcut('Ctrl+W')
+        self.wiki_action.setShortcut('Ctrl+Shift+W')
         self.wiki_action.setStatusTip('Reduces wiki citations')
 
         self.cite_action = QAction('Citation', self)
@@ -83,8 +83,10 @@ class MainWindow(QMainWindow):
         fileAction = menubar.addMenu('&File')
         fileAction.addAction(_exit)
         textAction = menubar.addMenu('&Text')
+        textAction.addAction(self.read_action)
         textAction.addAction(self.clipboard_read_action)
         textAction.addAction(self.stop_action)
+        textAction.addAction(self.toggle_action)
         reduceAction = menubar.addMenu('&Reduce')
         reduceAction.addAction(self.reduce_action)
         reduceAction.addAction(self.wiki_action)
@@ -93,11 +95,11 @@ class MainWindow(QMainWindow):
         # toolbarExit = self.addToolBar('Exit')
         # toolbarExit.addAction(_exit)
         toolbarText = self.addToolBar('Text')
+        toolbarText.addAction(self.read_action)
         toolbarText.addAction(self.clipboard_read_action)
         toolbarText.addAction(self.stop_action)
         toolbarText.addAction(self.toggle_action)
         toolbarReduce = self.addToolBar('Reduce')
-        toolbarReduce.addAction(self.read_action)
         toolbarReduce.addAction(self.reduce_action)
         toolbarReduce.addAction(self.wiki_action)
         toolbarReduce.addAction(self.cite_action)
