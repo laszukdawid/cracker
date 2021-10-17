@@ -74,3 +74,27 @@ Suggested execution command
 
     $ cd cracker
     $ python -m cracker.main
+
+Key shortcuts
+=============
+
+There's only one global command (read from clipboard).
+All commands are expected to be called when Cracker is in focus.
+
++----------------------+---------------------+--------+
+| Action               | Shortcut            | Global |
++======================+=====================+========+
+| Read (clipboard)     | Ctr + Shift + Space | Yes    |
++----------------------+---------------------+--------+
+| Read (text area)     | Ctr + Shift + R     | No     |
++----------------------+---------------------+--------+
+| Pause / Resume read  | Ctr + Space         | No     |
++----------------------+---------------------+--------+
+| Stop reading         | Ctr + Shift + S     | No     |
++----------------------+---------------------+--------+
+| Reduce (all active)  | Ctr + R             | No     |
++----------------------+---------------------+--------+
+| Reduce (wiki)        | Ctr + Shift + W     | No     |
++----------------------+---------------------+--------+
+| Reduce (citation)    | Ctr + Shift + C     | No     |
++----------------------+---------------------+--------+
