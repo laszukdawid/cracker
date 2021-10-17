@@ -80,6 +80,7 @@ class ConfigWindow(QWidget):
 
     def check_update(self) -> None:
         """Iterate through every option and see it they're active"""
+        assert self.regex_config, "Regex config hasn't been loaded"
         regex_config_options_layout = self.layout.itemAtPosition(0, 0).widget().layout
         for row in range(1, regex_config_options_layout.rowCount()):
             active_box = regex_config_options_layout.itemAtPosition(row, RegexConfigOptions.ACTIVE_POS).widget()
@@ -89,6 +90,7 @@ class ConfigWindow(QWidget):
                 self.regex_config[name]["active"] = active_box.isChecked()
     
     def get_regex_config(self):
+        assert self.regex_config, "Regex config hasn't been loaded"
         return self.regex_config.values()
 
 
