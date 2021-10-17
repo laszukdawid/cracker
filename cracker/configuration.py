@@ -1,5 +1,7 @@
-import configparser
 import json
+import os
+from configparser import ConfigParser
+from typing import Any, Dict
 
 
 class Configuration(object):
@@ -8,6 +10,7 @@ class Configuration(object):
    
     language_file = "voices.json"
     DEFAULT_CONFIG_PATH = "default_setting.ini"
+    USER_CONFIG_DIR_PATH = os.path.expanduser("~/.cracker")
 
     languages = []
     default_values = {}  # Additional values
@@ -26,32 +29,69 @@ class Configuration(object):
             cls.singleton = object.__new__(Configuration)  
         return cls.singleton  
 
-    def read_default_config(self):
-        configuration = configparser.ConfigParser()
-        configuration.read(self.DEFAULT_CONFIG_PATH)
+    def read_config(self) -> Dict[str, Any]:
+        """Reads configuration from file system.
+        
+        Firstly checks whether there are any user defined config in ~/.cracker/.
+        If config isn't there then it takes the default.
+        """
+        # Check defaults
+        config = self._read_default_config()
 
-        default_config = configuration['Default']
-        config = {}
-        config['parser_config'] = self.parser_config = default_config['parser_config']
-        config['speaker'] = self.speaker = default_config['speaker']
-        config['language'] = self.language = default_config['language']
-        config['speed'] = self.speed = int(default_config['speed'])
-        config['voice'] = self.voice = configuration['Default'+self.speaker]['Voice']
+        # Check if user has created config
+        if os.path.isdir(self.USER_CONFIG_DIR_PATH):
+            config = self._read_user_config(config)
+        
+        return self.apply_config(config)
+
+    def _read_default_config(self) -> ConfigParser:
+        configuration = ConfigParser()
+        configuration.read(self.DEFAULT_CONFIG_PATH)
+        return configuration
+
+    def _read_user_config(self, config: ConfigParser) -> ConfigParser:
+        user_config_path = os.path.join(self.USER_CONFIG_DIR_PATH, "setting.ini")
+        if not os.path.isfile(user_config_path):
+            return config
+
+        configuration = ConfigParser()
+        configuration.read(user_config_path)
+        for section in configuration.sections():
+            for (key, value) in configuration[section].items():
+                config.set(section, key, value)
+
+        return config
+
+    def apply_config(self, configuration: ConfigParser) -> Dict[str, Any]:
+        """Applies parsed config to Cracker and UI components.
+        
+        Returns:
+            Dict of the most important values which might be used by other components.
+            This includes: speaker, language, speed and voices with their settings.
+        """
+        config = configuration['Cracker']
+
+        _config = {}
+        _config['parser_config'] = self.parser_config = config['parser_config']
+        _config['speaker'] = self.speaker = config['speaker']
+        _config['language'] = self.language = config['language']
+        _config['speed'] = self.speed = int(config['speed'])
+        _config['voice'] = self.voice = configuration[self.speaker]['Voice']
 
         speaker_config = self.load_config(self.speaker, self.language)
-        config.update(speaker_config)
+        _config.update(speaker_config)
 
         # Check for different than default AWS profile_name
-        if self.speaker == "Polly" and "profile_name" in configuration['DefaultPolly']:
-            self.default_values['profile_name'] = configuration['DefaultPolly']['profile_name']
+        if self.speaker == "Polly" and "profile_name" in configuration['Polly']:
+            self.default_values['profile_name'] = configuration['Polly']['profile_name']
 
         if self.voice not in self.lang_voices:
-            config['voice'] = self.voice = self.lang_voices[0]
+            _config['voice'] = self.voice = self.lang_voices[0]
 
         if self.parser_config is not None:
             self.regex_config = self.load_regex_config()
 
-        return config
+        return _config
 
     def load_config(self, speaker, language=None):
         config = {}

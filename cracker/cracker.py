@@ -26,7 +26,7 @@ class Cracker(object):
         self.app = app
 
         self.config = Configuration()
-        _ = self.config.read_default_config()
+        _ = self.config.read_config()
 
         self.player = QMediaPlayer()
         self.speaker: AbstractSpeaker = self.get_speaker(self.config.speaker, self.player)
