@@ -39,8 +39,8 @@ class Polly(AbstractSpeaker):
             session = boto3.Session(profile_name=profile_name)
             self.client = session.client('polly')
         except Exception as e:
-            self._logger.exception("Unable to connect to AWS with the profile '%s'. " \
-                    "Please verify that configuration file exists.", profile_name)
+            self._logger.exception("Unable to connect to AWS with the profile '%s'. "
+                                   "Please verify that configuration file exists.", profile_name)
             raise e
 
     def save_cache(self, ssml: SSML, filepaths: List[str], voice):
