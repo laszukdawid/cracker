@@ -25,18 +25,18 @@ class KeyBoardManager(QObject):
 
         # Create a recording context; we only want key and mouse events
         self.ctx = self.record_dpy.record_create_context(
-                0,
+                0,  # noqa
                 [record.AllClients],
                 [{
-                        'core_requests': (0, 0),
-                        'core_replies': (0, 0),
-                        'ext_requests': (0, 0, 0, 0),
-                        'ext_replies': (0, 0, 0, 0),
-                        'delivered_events': (0, 0),
-                        'device_events': (X.KeyPress, X.MotionNotify),
-                        'errors': (0, 0),
-                        'client_started': False,
-                        'client_died': False,
+                    'core_requests': (0, 0),
+                    'core_replies': (0, 0),
+                    'ext_requests': (0, 0, 0, 0),
+                    'ext_replies': (0, 0, 0, 0),
+                    'delivered_events': (0, 0),
+                    'device_events': (X.KeyPress, X.MotionNotify),
+                    'errors': (0, 0),
+                    'client_started': False,
+                    'client_died': False,
                 }])
 
     def stop(self):
@@ -50,7 +50,6 @@ class KeyBoardManager(QObject):
             if name[:3] == "XK_" and getattr(XK, name) == keysym:
                 return name[3:]
         return "[%d]" % keysym
-
 
     def _record_callback(self, reply):
         if reply.category != record.FromServer or reply.client_swapped:
@@ -72,7 +71,7 @@ class KeyBoardManager(QObject):
                 key = self.__lookup_keysym(keysym).lower()
                 for idx, check_key in enumerate(self.check_keys):
                     if key.startswith(check_key):
-                        self.pressed_keys[idx] =pressed
+                        self.pressed_keys[idx] = pressed
             
             # Shortcut pressed
             if all(self.pressed_keys):
@@ -82,12 +81,12 @@ class KeyBoardManager(QObject):
         """*Should be run in deamon mode (preferrably as thread)*
 
         Sequence (list of str) is a list of key names that are checked against.
-        For example, sequence = ['space', 'k'] tiggers an event when 'space' and 'k' 
+        For example, sequence = ['space', 'k'] tiggers an event when 'space' and 'k'
         are pressed (down) at the same time.
 
         """
         self.check_keys = sequence
-        self.pressed_keys = [False]*len(self.check_keys)
+        self.pressed_keys = [False] * len(self.check_keys)
 
         # Check if the extension is present
         if not self.record_dpy.has_extension("RECORD"):
