@@ -3,6 +3,7 @@ import json
 import logging
 import re
 from collections import OrderedDict
+from typing import Optional
 
 
 class TextParser:
@@ -13,12 +14,11 @@ class TextParser:
     citation_numbers_comma = re.compile(r'\[\d+(,\s*\d+)*\]')
 
     # TODO: There shoudldn't be both `config_path` and `config`
-    def __init__(self, config=None, config_path=None):
+    def __init__(self, config_path: Optional[str] = None):
 
         self._config = None
         self._parser_rules = None
         self._regex_rules = OrderedDict()
-        self._logger.info("Init")
 
         # Check that this is a file
         if self._config is None and config_path is not None:
@@ -39,10 +39,11 @@ class TextParser:
     
     @parser_rules.setter
     def parser_rules(self, parser_rules):
+        assert self._config, "Need to provide config before parser"
         self._config["parser_rules"] = parser_rules
         self.update_config()
 
-    def read_config_path(self, config_path):
+    def read_config_path(self, config_path: str):
         """From provided path to a config it extracts configuration for the TextParser"""
         self._logger.info("parsing read config path")
 
@@ -61,18 +62,19 @@ class TextParser:
         self._regex_rules.clear()
 
         for rule in self.config["parser_rules"]:
-            if not rule['active']: continue
+            if not rule['active']:
+                continue
             self._regex_rules[rule['key']] = rule['value']
 
     @classmethod
-    def reduce_cite(cls, text):
+    def reduce_cite(cls, text: str) -> str:
         """Removes citations from pasted text."""
         text = cls.citation_numbers_comma.sub("", text)
         text = cls.citation_author_year.sub("", text)
         return text
 
     @staticmethod
-    def wiki_text(text):
+    def wiki_text(text: str) -> str:
         """Convert direct copy from Wikipedia into human-readable form."""
         text = re.sub(r'\[+[0-9]+\]', '', text)
         text = text.replace("[clarification needed]", '')
@@ -80,7 +82,7 @@ class TextParser:
         return text
 
     @staticmethod
-    def split_text(text, max_char=3000):
+    def split_text(text: str, max_char: int = 3000) -> str:
         doc_residue = text
         while len(doc_residue) > max_char:
             # TODO: Should the split be by whitespace if no '. ' ?
@@ -90,10 +92,10 @@ class TextParser:
         yield doc_residue
 
     @staticmethod
-    def escape_tags(text):
+    def escape_tags(text: str) -> str:
         return html.escape(text, quote=False)
 
-    def reduce_text(self, text):
+    def reduce_text(self, text: str) -> str:
         # For each method process text
         for key, value in self._regex_rules.items():
             text = re.sub(key, value, text)

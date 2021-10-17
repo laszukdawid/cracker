@@ -12,9 +12,10 @@ class AbstractSpeaker(abc.ABC):
     TMP_FILEPATH = "tmp.mp3"
     RATES = []
     VOLUMES = []
-    text_cleaners = [(re.compile(r'\n'), '. '),
-                     (re.compile(r'&'), 'and'),
-                    ]
+    text_cleaners = [
+        (re.compile(r'\n'), '. '),
+        (re.compile(r'&'), 'and'),
+    ]
 
     @abc.abstractmethod
     def read_text(self, text: str, **config) -> None:

@@ -1,12 +1,14 @@
 import json
+import logging
 import os
 from configparser import ConfigParser
 from typing import Any, Dict
 
 
-class Configuration(object):
+class Configuration:
     """Holds configuration values for the application."""
-    singleton = None  
+    singleton = None
+    _logger = logging.getLogger(__name__)
    
     language_file = "voices.json"
     DEFAULT_CONFIG_PATH = "default_setting.ini"
@@ -19,15 +21,14 @@ class Configuration(object):
     language = None
     voice = None
     voices = []
-    speed = None
+    speed = 0
 
     regex_config = None
 
-
-    def __new__(cls, *args, **kwargs):  
-        if not cls.singleton:  
-            cls.singleton = object.__new__(Configuration)  
-        return cls.singleton  
+    def __new__(cls, *args, **kwargs):
+        if not cls.singleton:
+            cls.singleton = object.__new__(Configuration)
+        return cls.singleton
 
     def read_config(self) -> Dict[str, Any]:
         """Reads configuration from file system.
@@ -64,7 +65,7 @@ class Configuration(object):
 
     def apply_config(self, configuration: ConfigParser) -> Dict[str, Any]:
         """Applies parsed config to Cracker and UI components.
-        
+
         Returns:
             Dict of the most important values which might be used by other components.
             This includes: speaker, language, speed and voices with their settings.

@@ -1,13 +1,19 @@
-#!/usr/bin/python
-# coding: UTF-8
 import logging
+from typing import Dict, Optional, Type, Union
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtWidgets import (QAction, QComboBox, QGridLayout, QLabel, QMainWindow, QSlider, QSpinBox, QTextEdit,
                              QVBoxLayout, QWidget)
+from cracker.configuration import Configuration
+
+from cracker.speaker.abstract_speaker import AbstractSpeaker
+from cracker.speaker.espeak import Espeak
+from cracker.speaker.polly import Polly
 
 from .View.config_window import ConfigWindow
+
+SpeakersType = Dict[str, Union[Type[Espeak], Type[Polly]]]
 
 
 class MainWindow(QMainWindow):
@@ -16,7 +22,7 @@ class MainWindow(QMainWindow):
     _logger = logging.getLogger(__name__)
     closeAppEvent = pyqtSignal()
 
-    def __init__(self, config, speakers):
+    def __init__(self, config: Configuration, speakers: SpeakersType):
         super().__init__()
 
         self.resize(800, 250)
@@ -25,8 +31,8 @@ class MainWindow(QMainWindow):
         self.config = config
 
         self.speakers = speakers
-        self.speaker = None
-        self.player = None
+        self.speaker: Optional[AbstractSpeaker] = None
+        self.player: Optional[QMediaPlayer] = None
 
         self.config_window = ConfigWindow()
 
@@ -37,6 +43,7 @@ class MainWindow(QMainWindow):
         self.config_window.init(regex_file_path=self.config.parser_config)
 
     def set_action(self):
+        assert self.player, "Cannot set actions on non-defined Player"
         _exit = QAction('Exit', self)
         _exit.setShortcut('Ctrl+Q')
         _exit.setStatusTip('Exit application')
@@ -117,6 +124,8 @@ class MainWindow(QMainWindow):
         menuLayout = QGridLayout()
 
         # Speaker - label and widget
+        assert self.config.speaker, "Speaker needs to be defined"
+
         self.speakerLabel = QLabel("Speaker:")
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.speakers.keys())
@@ -176,26 +185,31 @@ class MainWindow(QMainWindow):
         self.change_language(self.config.language)
 
     def closeEvent(self, close_event):
+        """Triggers CloseEvent and handles closing gracefully"""
         self.closeAppEvent.emit()
-        self.speaker.__del__()
+        del self.speaker
         self.close()
 
-    def change_speaker(self, speaker_name):
+    def change_speaker(self, speaker_name: str):
         """Action on changing speaker.
 
-        Important: Each speaker has its own configuration. These values should be updated on change."""
+        Important: Each speaker has its own configuration.
+        These values should be updated on change.
+        """
         self.speaker = self.speakers[speaker_name](self.player)
         self.config.load_config(speaker_name)
         self.init_values()
 
     def change_volume(self, volume):
         """Volume should be on a percentage scale"""
-        discrete_vol = int(volume*len(self.speaker.VOLUMES)/100)
+        assert self.speaker, "Speaker doesn't exist. Can't change volume."
+        discrete_vol = int(volume * len(self.speaker.VOLUMES) / 100)
         self.volume = self.speaker.VOLUMES[discrete_vol]
 
     def change_speed(self, speed):
+        assert self.speaker, "Speaker doesn't exist. Can't change speed."
         self.speed = speed
-        self.rate = self.speaker.RATES[speed-1]
+        self.rate = self.speaker.RATES[speed - 1]
 
     def change_language(self, language):
         self.config.language = language

@@ -1,11 +1,8 @@
-#!/usr/bin/python
-# coding: UTF-8
 import json
 import logging
-from PyQt5.QtWidgets import QGridLayout
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtWidgets import QPushButton
-from PyQt5.QtWidgets import QCheckBox, QLineEdit, QLabel
+from typing import Any, Dict, Optional
+
+from PyQt5.QtWidgets import QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton, QWidget
 
 from cracker.configuration import Configuration
 
@@ -25,15 +22,15 @@ class ConfigWindow(QWidget):
         self.regex_config = {}
         self.setWindowTitle("Configuration")
 
-        self.layout = QGridLayout()
-        self.setLayout(self.layout)
+        self._layout = QGridLayout()
+        self.setLayout(self._layout)
 
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.released.connect(self.cancel_action)
         self.confirm_btn = QPushButton("Ok")
         self.confirm_btn.released.connect(self.confirm_action)
-        self.layout.addWidget(self.cancel_btn, 1, 3)
-        self.layout.addWidget(self.confirm_btn, 1, 4)
+        self._layout.addWidget(self.cancel_btn, 1, 3)
+        self._layout.addWidget(self.confirm_btn, 1, 4)
 
         self.resize(500, self.height())
  
@@ -57,18 +54,18 @@ class ConfigWindow(QWidget):
             if child.widget():
                 child.widget().deleteLater()
 
-    def refresh_reduce_rules(self):
+    def refresh_reduce_rules(self) -> Optional[Dict]:
         """From provided path to a config it extracts configuration for the TextParser"""
         if len(self.regex_file_path) == 0:
             print("Couldn't find config file. Skipping configuration.")
             return
 
+        regex_config_list = {}
         try:
             with open(self.regex_file_path) as f:
                 regex_config_list = json.loads(f.read())
-        except Exception as e:
-            print("While reading config", e)
-            self._logger.error(e)
+        except Exception:
+            self._logger.exception("While reading config")
         
         regex_config = {}
         for regex_entry in regex_config_list["parser_rules"]:
@@ -79,9 +76,9 @@ class ConfigWindow(QWidget):
     
     def create_options(self, options):
         regex_config_options = RegexConfigOptions(options)
-        self.layout.addWidget(regex_config_options, 0, 0, 1, 5)
+        self._layout.addWidget(regex_config_options, 0, 0, 1, 5)
 
-    def check_update(self):
+    def check_update(self) -> None:
         """Iterate through every option and see it they're active"""
         regex_config_options_layout = self.layout.itemAtPosition(0, 0).widget().layout
         for row in range(1, regex_config_options_layout.rowCount()):
@@ -92,7 +89,8 @@ class ConfigWindow(QWidget):
                 self.regex_config[name]["active"] = active_box.isChecked()
     
     def get_regex_config(self):
-       return self.regex_config.values()
+        return self.regex_config.values()
+
 
 class RegexConfigOptions(QWidget):
 
@@ -101,7 +99,7 @@ class RegexConfigOptions(QWidget):
     KEY_POS = 6
     VALUE_POS = 10
 
-    def __init__(self, options):
+    def __init__(self, options: Dict[str, Any]):
         super().__init__()
 
         self.layout = QGridLayout()
@@ -110,21 +108,20 @@ class RegexConfigOptions(QWidget):
         # Always add header
         self.create_header()
 
-        for num, named_option in enumerate(options.items()):
-            name, option = named_option
+        for num, (_, option) in enumerate(options.items()):
             self.create_config_row(option, num + 1)
     
-    def create_header(self, row_num=0):
+    def create_header(self, row_num: int = 0) -> None:
         self.layout.addWidget(QLabel("Active"), row_num, self.ACTIVE_POS)
         self.layout.addWidget(QLabel("Name"), row_num, self.NAME_POS, 1, 4)
         self.layout.addWidget(QLabel("Key"), row_num, self.KEY_POS, 1, 4)
         self.layout.addWidget(QLabel("Value"), row_num, self.VALUE_POS, 1, 4)
     
-    def create_config_row(self, options, row_num):
-        active = options["active"] if "active" in options else False
-        name = options["name"] if "name" in options else "undefined"
-        key = options["key"] if "key" in options else ""
-        value = options["value"] if "value" in options else ""
+    def create_config_row(self, options: Dict, row_num: int) -> None:
+        active = options.get("active", False)
+        name = options.get("name", "undefined")
+        key = options.get("key", "")
+        value = options.get("value", "")
 
         active_widget = QCheckBox()
         active_widget.setChecked(active)
