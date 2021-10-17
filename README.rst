@@ -1,5 +1,5 @@
 =============
-aws-polly-gui
+Cracker
 =============
 Usable GUI for AWS Polly text-to-speech service.
 
@@ -39,5 +39,5 @@ Suggested execution command
 .. code-block:: bash
 
     $ cd aws-polly-gui
-    $ python -m aws_polly_gui.main
+    $ python -m cracker.main
 

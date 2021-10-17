@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QCheckBox, QLineEdit, QLabel
 
-from aws_polly_gui.configuration import Configuration
+from cracker.configuration import Configuration
 
 
 class ConfigWindow(QWidget):

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-install_dir=$(pwd)
-echo "Install dir $install_dir"
+set -x
+INSTALL_DIR=$(pwd)
+echo "Install dir $INSTALL_DIR"
 
 cd ..
 echo "cd $(pwd)" > cracker
-echo "python3 -m aws_polly_gui.main" >> cracker
+echo "python3 -m cracker.main" >> cracker
 
 chmod +x cracker
 
@@ -12,5 +13,5 @@ chmod +x cracker
 # These two require root permission.
 # TODO: Install it locally
 mv cracker /usr/bin/
-cp $install_dir/cracker.desktop /usr/share/applications/
-cp $install_dir/papuga.jpeg ~/.local/share/icons/
+cp $INSTALL_DIR/cracker.desktop /usr/share/applications/
+cp $INSTALL_DIR/papuga.jpeg ~/.local/share/icons/
