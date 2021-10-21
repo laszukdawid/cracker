@@ -49,6 +49,11 @@ class MainWindow(QMainWindow):
         _exit.setStatusTip('Exit application')
         _exit.triggered.connect(self.closeEvent)
 
+        _save = QAction('Save config', self)
+        _save.setShortcut('Ctrl+S')
+        _save.setStatusTip('Save configure')
+        _save.triggered.connect(self.save_config)
+
         self.stop_action = QAction('Stop', self)
         self.stop_action.setShortcut('Ctrl+Shift+S')
         self.stop_action.setStatusTip('Stops text')
@@ -88,6 +93,7 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         fileAction = menubar.addMenu('&File')
+        fileAction.addAction(_save)
         fileAction.addAction(_exit)
         textAction = menubar.addMenu('&Text')
         textAction.addAction(self.read_action)
@@ -190,6 +196,10 @@ class MainWindow(QMainWindow):
         del self.speaker
         self.close()
 
+    def save_config(self):
+        self._logger.info("Saving user config")
+        self.config.save_user_config()
+
     def change_speaker(self, speaker_name: str):
         """Action on changing speaker.
 
@@ -197,6 +207,7 @@ class MainWindow(QMainWindow):
         These values should be updated on change.
         """
         self.speaker = self.speakers[speaker_name](self.player)
+        self.config.speaker = speaker_name
         self.config.load_config(speaker_name)
         self.init_values()
 
@@ -208,7 +219,7 @@ class MainWindow(QMainWindow):
 
     def change_speed(self, speed):
         assert self.speaker, "Speaker doesn't exist. Can't change speed."
-        self.speed = speed
+        self.config.speed = speed
         self.rate = self.speaker.RATES[speed - 1]
 
     def change_language(self, language):
