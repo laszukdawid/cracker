@@ -8,6 +8,6 @@ Exec=cracker
 Terminal=false
 Type=Application
 Keywords=Text;Reader;
-Icon=papuga
+Icon=~/.local/share/icons/cracker.png
 Categories=Utility;
 StartupNotify=true
