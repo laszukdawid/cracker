@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from configparser import ConfigParser
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class Configuration:
@@ -24,7 +24,7 @@ class Configuration:
     speed = 0
 
     regex_config = None
-
+    
     def __new__(cls, *args, **kwargs):
         if not cls.singleton:
             cls.singleton = object.__new__(Configuration)
@@ -37,31 +37,53 @@ class Configuration:
         If config isn't there then it takes the default.
         """
         # Check defaults
-        config = self._read_default_config()
+        self._default_config = config = self._read_default_config()
 
         # Check if user has created config
         if os.path.isdir(self.USER_CONFIG_DIR_PATH):
-            config = self._read_user_config(config)
+            config = self._read_user_config(self.default_config)
         
         return self.apply_config(config)
 
     def _read_default_config(self) -> ConfigParser:
         configuration = ConfigParser()
         configuration.read(self.DEFAULT_CONFIG_PATH)
+
         return configuration
+    
+    @property
+    def user_config_path(self):
+        return os.path.join(self.USER_CONFIG_DIR_PATH, "setting.ini")
+    
+    @property
+    def default_config(self):
+        if self._default_config is None:
+            return ConfigParser()
+        return self._default_config
 
     def _read_user_config(self, config: ConfigParser) -> ConfigParser:
-        user_config_path = os.path.join(self.USER_CONFIG_DIR_PATH, "setting.ini")
-        if not os.path.isfile(user_config_path):
+        if not os.path.isfile(self.user_config_path):
             return config
 
         configuration = ConfigParser()
-        configuration.read(user_config_path)
+        configuration.read(self.user_config_path)
         for section in configuration.sections():
             for (key, value) in configuration[section].items():
                 config.set(section, key, value)
 
         return config
+    
+    def save_user_config(self):
+        assert self.default_config
+        config = self._read_user_config(self.default_config)
+
+        config['Cracker']['speaker'] = self.speaker or self.default_config['Cracker']['speaker']
+        config['Cracker']['language'] = self.language or self.default_config['Cracker']['language']
+        config['Cracker']['speed'] = str(self.speed) or self.default_config['Cracker']['speed']
+        config['Cracker']['voice'] = self.voice or self.default_config['Cracker']['voice']
+
+        with open(self.user_config_path, 'w') as f:
+            config.write(f)
 
     def apply_config(self, configuration: ConfigParser) -> Dict[str, Any]:
         """Applies parsed config to Cracker and UI components.
