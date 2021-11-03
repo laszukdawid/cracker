@@ -5,13 +5,12 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtWidgets import (QAction, QComboBox, QGridLayout, QLabel, QMainWindow, QSlider, QSpinBox, QTextEdit,
                              QVBoxLayout, QWidget)
-from cracker.configuration import Configuration
 
+from cracker.configuration import Configuration
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
 from cracker.speaker.polly import Polly
-
-from .View.config_window import ConfigWindow
+from cracker.view.config_window import ConfigWindow
 
 SpeakersType = Dict[str, Union[Type[Espeak], Type[Polly]]]
 
