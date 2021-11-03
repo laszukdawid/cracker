@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from configparser import ConfigParser
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 
 class Configuration:
@@ -62,6 +62,10 @@ class Configuration:
         return self._default_config
 
     def _read_user_config(self, config: ConfigParser) -> ConfigParser:
+        if not os.path.isdir(self.USER_CONFIG_DIR_PATH):
+            self._logger.debug("Creating user dir in '%s'", self.USER_CONFIG_DIR_PATH)
+            os.mkdir(self.USER_CONFIG_DIR_PATH)
+
         if not os.path.isfile(self.user_config_path):
             return config
 
