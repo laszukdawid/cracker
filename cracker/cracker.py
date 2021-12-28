@@ -40,7 +40,7 @@ class Cracker(object):
         self.gui.closeAppEvent.connect(self._close)
 
         self._last_pid = None
-    
+
     def _close(self):
         "Handles closing whole application"
         self.key_manager.stop()
@@ -48,7 +48,7 @@ class Cracker(object):
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         if speaker_name == Polly.__name__:
             if "profile_name" in self.config.default_values:
-                profile_name = self.config.default_values['profile_name']
+                profile_name = self.config.default_values["profile_name"]
                 return Polly(player, profile_name)
             else:
                 return Polly(player)
@@ -87,20 +87,24 @@ class Cracker(object):
         self.textParser.parser_rules = self.config.regex_config
         text = self.textParser.reduce_text(text)
         self._read(text)
-    
-    def read_text_clipboard(self):
-        """Reads out text from the clipboard with selected speaker."""
-        self.stop_text()
-        text = self.app.clipboard().text()
 
-        self.textParser.parser_rules = self.config.regex_config
-        text = self.textParser.reduce_text(text)
-        self._read(text)
+    def toggle_read_text_clipboard(self):
+        """Reads out text from the clipboard with selected speaker."""
+        if self.player.state() == QMediaPlayer.PlayingState:
+            self.stop_text()
+            self.player.stop()
+        else:
+            self.stop_text()
+            text = self.app.clipboard().text()
+
+            self.textParser.parser_rules = self.config.regex_config
+            text = self.textParser.reduce_text(text)
+            self._read(text)
 
     def _read(self, text):
         speaker_config = self._prepare_config()
         self._last_pid = self.speaker.read_text(text, **speaker_config)
-    
+
     def toggle_read(self):
         if self.player.state() == QMediaPlayer.PausedState:
             self.player.play()
@@ -124,14 +128,14 @@ class Cracker(object):
     def set_action(self):
         self.gui.stop_action.triggered.connect(self.stop_text)
         self.gui.read_action.triggered.connect(self.read_text_area)
-        self.gui.clipboard_read_action.triggered.connect(self.read_text_clipboard)
+        self.gui.clipboard_read_action.triggered.connect(self.toggle_read_text_clipboard)
         self.gui.toggle_action.triggered.connect(self.toggle_read)
         self.gui.reduce_action.triggered.connect(self.reduce_text)
         self.gui.wiki_action.triggered.connect(self.wiki_text)
         self.gui.speakerW.currentTextChanged.connect(self.change_speaker)
 
-        self.key_manager.GlobalReadSignal.connect(self.read_text_clipboard)
+        self.key_manager.GlobalReadSignal.connect(self.toggle_read_text_clipboard)
 
-        args = (['space', 'control', 'shift'], )
+        args = (["space", "control", "shift"], )
         p = Thread(target=self.key_manager.run, args=args)
         p.start()
