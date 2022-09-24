@@ -1,3 +1,24 @@
 [build-system]
-requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+# requires = ["setuptools", "setuptools-scm", "wheel"]
+requires = ["setuptools >= 61.0", "setuptools-scm"]
+
+[project]
+dependencies = [
+  "boto3==1.24.*",
+  "python-vlc==3.*",
+  "pyqt5==5.15.*",
+  "python-xlib==0.31",
+]
+name = "Cracker"
+readme = "README.rst"
+version = "0.1.1"
+
+[project.optional-dependencies]
+dev = ["black", "isort", "pycodestyle"]
+
+[tool.setuptools.packages.find]
+where = ["cracker"]
+
+[tool.isort]
+line_length = 120

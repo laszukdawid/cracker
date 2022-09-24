@@ -1,2 +1,2 @@
-import setuptools
-setuptools.setup()
+from setuptools import setup
+setup()
