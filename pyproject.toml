@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0", "setuptools-scm"]
 
 [project]
 dependencies = [
@@ -9,13 +9,22 @@ dependencies = [
   "pyqt5==5.15.*",
   "python-xlib==0.31",
 ]
-name = "Cracker"
+name = "cracker"
 readme = "README.md"
-version = "0.1.1"
+dynamic = ["version"]
+
+[project.gui-scripts]
+cracker = "cracker.main:main"
 
 [project.optional-dependencies]
 dev = ["black", "isort", "pycodestyle"]
-build = ["build", "hatchling", "twine"]
+build = ["setuptools>=61", "build", "twine"]
+
+[tool.setuptools]
+packages = ["cracker"]
+
+[tool.setuptools.dynamic]
+version = {attr = "cracker.__version__"}
 
 [tool.isort]
 line_length = 120

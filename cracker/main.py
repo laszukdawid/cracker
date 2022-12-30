@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
 
 from cracker.cracker import Cracker
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     app.setApplicationName('Cracker')
 
@@ -20,3 +20,7 @@ if __name__ == "__main__":
     tray.setVisible(True)
 
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
