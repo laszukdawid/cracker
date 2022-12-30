@@ -11,5 +11,5 @@ sudo apt-get install -y pyqt5-dev python3-pyqt5 python3-pyqt5.qtmultimedia vlc l
 #apt install -y libqt5gstreamer-dev
 #apt install -y libqt5gstreamer-1.0-0
 
-echo "\n\n\n\n"
+printf "\n\n"
 echo "Remember to remove ~/.local/.../PyQt5*"
