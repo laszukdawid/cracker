@@ -42,7 +42,8 @@
       "key": "\\t",
       "value": " "
     },
-    { "name": "trailing_whitespace",
+    {
+      "name": "trailing_whitespace",
       "active": false,
       "key": "\\b\\s+\\.",
       "value": "."

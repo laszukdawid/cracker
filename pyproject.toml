@@ -1,7 +1,6 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-# requires = ["setuptools", "setuptools-scm", "wheel"]
-requires = ["setuptools >= 61.0", "setuptools-scm"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 dependencies = [
@@ -11,14 +10,12 @@ dependencies = [
   "python-xlib==0.31",
 ]
 name = "Cracker"
-readme = "README.rst"
+readme = "README.md"
 version = "0.1.1"
 
 [project.optional-dependencies]
 dev = ["black", "isort", "pycodestyle"]
-
-[tool.setuptools.packages.find]
-where = ["cracker"]
+build = ["build", "hatchling", "twine"]
 
 [tool.isort]
 line_length = 120
