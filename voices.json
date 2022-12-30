@@ -1,13 +1,39 @@
-{"Polly": {"Languages": {
-  "English":["Joanna", "Salli", "Kimberly", "Kendra", "Ivy", "Matthew", "Justin", "Joey"],
-  "Polish": ["Ewa", "Maja", "Jan", "Jacek"],
-  "Spanish": ["Penelope", "Miguel"]
-}},
-  "Espeak": {"Languages":
-  {
-    "English": ["english"],
-    "Polish": ["polish"],
-    "Spanish": ["spanish"]
-  }}
+{
+  "Polly": {
+    "Languages": {
+      "English": [
+        "Joanna",
+        "Salli",
+        "Kimberly",
+        "Kendra",
+        "Ivy",
+        "Matthew",
+        "Justin",
+        "Joey"
+      ],
+      "Polish": [
+        "Ewa",
+        "Maja",
+        "Jan",
+        "Jacek"
+      ],
+      "Spanish": [
+        "Penelope",
+        "Miguel"
+      ]
+    }
+  },
+  "Espeak": {
+    "Languages": {
+      "English": [
+        "english"
+      ],
+      "Polish": [
+        "polish"
+      ],
+      "Spanish": [
+        "spanish"
+      ]
+    }
+  }
 }
-
