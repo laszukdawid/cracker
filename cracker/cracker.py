@@ -136,6 +136,6 @@ class Cracker(object):
 
         self.key_manager.GlobalReadSignal.connect(self.toggle_read_text_clipboard)
 
-        args = (["space", "control", "shift"], )
+        args = (["space", "ctrl", "shift"], )
         p = Thread(target=self.key_manager.run, args=args)
         p.start()
