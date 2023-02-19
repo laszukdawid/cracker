@@ -23,6 +23,24 @@
       ]
     }
   },
+  "Google": {
+    "Languages": {
+      "English": [
+        "en-US",
+        "en-GB",
+        "en-AU",
+        "en-CA",
+        "en-IN"
+      ],
+      "Polish": [
+        "pl-PL"
+      ],
+      "Spanish": [
+        "es-ES",
+        "es-US"
+      ]
+    }
+  },
   "Espeak": {
     "Languages": {
       "English": [
