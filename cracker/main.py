@@ -1,11 +1,12 @@
 #!/usr/bin/python
 # coding: UTF-8
 import sys
-from PyQt5.QtGui import QIcon
 
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
 
 from cracker.cracker import Cracker
+
 
 def main():
     app = QApplication(sys.argv)
