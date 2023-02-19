@@ -1,6 +1,12 @@
 # Cracker
 
-Usable GUI for text-to-speech services (mainly AWS Polly and ESpeak).
+Usable GUI for text-to-speech services.
+
+## Supported text-to-speech
+
+* ESpeak -- https://en.wikipedia.org/wiki/ESpeak
+* AWS Polly -- https://aws.amazon.com/polly/
+* Google TextToSpeech -- https://cloud.google.com/text-to-speech/
 
 ## Why all of this
 

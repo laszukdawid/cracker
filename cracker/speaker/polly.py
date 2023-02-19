@@ -1,4 +1,3 @@
-import logging
 import os
 from typing import List
 
@@ -9,6 +8,7 @@ from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 from cracker.mp3_helper import create_filename, save_mp3
 from cracker.ssml import SSML
 from cracker.text_parser import TextParser
+from cracker.utils import get_logger
 
 from .abstract_speaker import AbstractSpeaker
 
@@ -16,7 +16,7 @@ from .abstract_speaker import AbstractSpeaker
 class Polly(AbstractSpeaker):
     """Interface for communication with AWS Polly"""
 
-    _logger = logging.getLogger(__name__)
+    _logger = get_logger(__name__)
 
     RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]

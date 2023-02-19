@@ -9,6 +9,7 @@ from cracker.keylogger import KeyBoardManager
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
 from cracker.speaker.polly import Polly
+from cracker.speaker.google import Google
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
 
@@ -16,7 +17,7 @@ from cracker.utils import get_logger
 class Cracker(object):
     """Logic for running the Cracker program"""
 
-    SPEAKER = {Polly.__name__: Polly, Espeak.__name__: Espeak}
+    SPEAKER = {Polly.__name__: Polly, Espeak.__name__: Espeak, Google.__name__: Google}
     _logger = get_logger(__name__)
 
     def __init__(self, app: QApplication):
@@ -52,6 +53,9 @@ class Cracker(object):
                 return Polly(player, profile_name)
             else:
                 return Polly(player)
+        elif speaker_name == Google.__name__:
+            credentials_file = self.config.default_values.get("credentials_file", None)
+            return Google(player, credentials_file)
         elif speaker_name == Espeak.__name__:
             return Espeak(player)
         raise ValueError(f"No speaker was selected. Provided speaker name '{speaker_name}'")
