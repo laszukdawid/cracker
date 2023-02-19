@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, Optional, Type, Union
 
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -10,6 +9,7 @@ from cracker.configuration import Configuration
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
 from cracker.speaker.polly import Polly
+from cracker.utils import get_logger
 from cracker.view.config_window import ConfigWindow
 
 SpeakersType = Dict[str, Union[Type[Espeak], Type[Polly]]]
@@ -18,7 +18,7 @@ SpeakersType = Dict[str, Union[Type[Espeak], Type[Polly]]]
 class MainWindow(QMainWindow):
     """Main GUI for Polly text-to-speech."""
 
-    _logger = logging.getLogger(__name__)
+    _logger = get_logger(__name__)
     closeAppEvent = pyqtSignal()
 
     def __init__(self, config: Configuration, speakers: SpeakersType):
@@ -215,11 +215,13 @@ class MainWindow(QMainWindow):
         assert self.speaker, "Speaker doesn't exist. Can't change volume."
         discrete_vol = int(volume * len(self.speaker.VOLUMES) / 100)
         self.volume = self.speaker.VOLUMES[discrete_vol]
+        self.save_config()
 
     def change_speed(self, speed):
         assert self.speaker, "Speaker doesn't exist. Can't change speed."
         self.config.speed = speed
         self.rate = self.speaker.RATES[speed - 1]
+        self.save_config()
 
     def change_language(self, language):
         self.config.language = language
@@ -227,9 +229,11 @@ class MainWindow(QMainWindow):
         self.voiceW.clear()
         self.voiceW.addItems(voices)
         self.change_voice(voices[0])
+        self.save_config()
 
     def change_voice(self, voice):
         self.config.voice = voice
+        self.save_config()
 
     def toggle_label(self, state):
         if QMediaPlayer.PlayingState == state:

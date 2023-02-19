@@ -1,4 +1,3 @@
-import logging
 from threading import Thread
 
 from PyQt5.QtMultimedia import QMediaPlayer
@@ -11,13 +10,14 @@ from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
 from cracker.speaker.polly import Polly
 from cracker.text_parser import TextParser
+from cracker.utils import get_logger
 
 
 class Cracker(object):
     """Logic for running the Cracker program"""
 
     SPEAKER = {Polly.__name__: Polly, Espeak.__name__: Espeak}
-    _logger = logging.getLogger(__name__)
+    _logger = get_logger(__name__)
 
     def __init__(self, app: QApplication):
         super().__init__()
@@ -90,6 +90,7 @@ class Cracker(object):
 
     def toggle_read_text_clipboard(self):
         """Reads out text from the clipboard with selected speaker."""
+        self._logger.debug("Reading text from clipboard")
         if self.player.state() == QMediaPlayer.PlayingState:
             self.stop_text()
             self.player.stop()
@@ -102,6 +103,7 @@ class Cracker(object):
             self._read(text)
 
     def _read(self, text):
+        self._logger.debug(f"Reading text: {text}")
         speaker_config = self._prepare_config()
         self._last_pid = self.speaker.read_text(text, **speaker_config)
 

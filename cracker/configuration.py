@@ -12,7 +12,7 @@ class Configuration:
    
     language_file = "voices.json"
     DEFAULT_CONFIG_PATH = "default_setting.ini"
-    USER_CONFIG_DIR_PATH = os.path.expanduser("~/.cracker")
+    USER_CONFIG_DIR_PATH = os.path.expanduser("~/.config/cracker")
 
     languages = []
     default_values = {}  # Additional values
