@@ -5,7 +5,6 @@ from cracker.text_parser import TextParser
 
 
 class TestTextParser(unittest.TestCase):
-
     sentece_24chars = "This line has 24 chars. "
 
     def test_paper_single_round_brackets(self):
@@ -60,7 +59,11 @@ class TestTextParser(unittest.TestCase):
 
         split_text = list(TextParser.split_text(document))
         self.assertEqual(len(split_text), 3, "Two parts")
-        self.assertEqual(len(split_text[0]), len(split_text[1]), "Both parts should have the same length")
+        self.assertEqual(
+            len(split_text[0]),
+            len(split_text[1]),
+            "Both parts should have the same length",
+        )
         self.assertEqual(len(split_text[2]), 300, "Simple maths: 6300 - 6000 = 300")
 
     def test_escape_char_quote(self):
@@ -69,7 +72,7 @@ class TestTextParser(unittest.TestCase):
         self.assertEqual(out_s, s, "Quotes shouldn't be changed")
 
     def test_escape_tags_xml(self):
-        s = '<he><said>She said</said></he>'
+        s = "<he><said>She said</said></he>"
         out_s = TextParser.escape_tags(s)
-        expected_s = '&lt;he&gt;&lt;said&gt;She said&lt;/said&gt;&lt;/he&gt;'
+        expected_s = "&lt;he&gt;&lt;said&gt;She said&lt;/said&gt;&lt;/he&gt;"
         self.assertEqual(out_s, expected_s, "Tags should be converted to &...;")

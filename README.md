@@ -35,24 +35,21 @@ I'm going to update *Cracker* as needed. Anyone and everyone is welcome to contr
 
 ## Installation
 
-It should be enough to checkout this package and install it's dependencies with `pip`
+It should be enough to install via `pip`, i.e.
 
-    
 ```shell
-$ git clone git@github.com:laszukdawid/cracker.git
-$ cd cracker
-$ pip install -e .
+$ pip install cracker
 ```
 
-Now you can launch Cracker. See [Usage](#usage) section below.
+See [Usage](#usage) section below.
 
-### Old instructions but might be necessary
+### Development
 
 *PyQt5* is used to display GUI. To install PyQt5 head off to their [installation page](http://pyqt.sourceforge.net/Docs/PyQt5/installation.html).
 Package is currently heavily favouring Ubuntu as end OS. If you are one of the lucky ones then the installation requires:
 
 ```shell
-$ sudo sh install.sh
+$ sudo sh install.sh  # Installs pyqt5 on Ubuntu
 $ pip install -r .
 ```
 

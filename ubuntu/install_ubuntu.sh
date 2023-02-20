@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -e
+echo "Installing PyQt5 and VLC"
+sudo apt-get install -y pyqt5-dev python3-pyqt5 python3-pyqt5.qtmultimedia vlc libvlc-dev
+
 INSTALL_DIR=$(pwd)
 echo "Install dir $INSTALL_DIR"
 
@@ -25,4 +28,6 @@ chmod +x cracker_tmp
 cp $INSTALL_DIR/cracker.desktop ~/.local/share/applications/
 # sudo cp $INSTALL_DIR/icon.jpeg ~/.local/share/icons/cracker.jpeg
 cp $INSTALL_DIR/icon.png ~/.local/share/icons/cracker.png
+
+
 sudo mv cracker_tmp /usr/bin/cracker

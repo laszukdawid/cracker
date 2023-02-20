@@ -8,11 +8,10 @@ from cracker.configuration import Configuration
 
 
 class ConfigWindow(QWidget):
-
     _logger = logging.getLogger(__name__)
- 
+
     option_row_offset = 1
-    
+
     def __init__(self):
         super().__init__()
 
@@ -33,13 +32,13 @@ class ConfigWindow(QWidget):
         self._layout.addWidget(self.confirm_btn, 1, 4)
 
         self.resize(500, self.height())
- 
+
     def init(self, regex_file_path=""):
         self.regex_file_path = regex_file_path
 
         self.regex_config = self.refresh_reduce_rules()
         self.create_options(self.regex_config)
-    
+
     def cancel_action(self):
         self.hide()
 
@@ -66,14 +65,14 @@ class ConfigWindow(QWidget):
                 regex_config_list = json.loads(f.read())
         except Exception:
             self._logger.exception("While reading config")
-        
+
         regex_config = {}
         for regex_entry in regex_config_list["parser_rules"]:
             name = regex_entry["name"]
             regex_config[name] = regex_entry
 
         return regex_config
-    
+
     def create_options(self, options):
         regex_config_options = RegexConfigOptions(options)
         self._layout.addWidget(regex_config_options, 0, 0, 1, 5)
@@ -88,14 +87,13 @@ class ConfigWindow(QWidget):
             name = name_widget.text()
             if name in self.regex_config:
                 self.regex_config[name]["active"] = active_box.isChecked()
-    
+
     def get_regex_config(self):
         assert self.regex_config, "Regex config hasn't been loaded"
         return self.regex_config.values()
 
 
 class RegexConfigOptions(QWidget):
-
     ACTIVE_POS = 1
     NAME_POS = 2
     KEY_POS = 6
@@ -106,19 +104,19 @@ class RegexConfigOptions(QWidget):
 
         self.layout = QGridLayout()
         self.setLayout(self.layout)
-        
+
         # Always add header
         self.create_header()
 
         for num, (_, option) in enumerate(options.items()):
             self.create_config_row(option, num + 1)
-    
+
     def create_header(self, row_num: int = 0) -> None:
         self.layout.addWidget(QLabel("Active"), row_num, self.ACTIVE_POS)
         self.layout.addWidget(QLabel("Name"), row_num, self.NAME_POS, 1, 4)
         self.layout.addWidget(QLabel("Key"), row_num, self.KEY_POS, 1, 4)
         self.layout.addWidget(QLabel("Value"), row_num, self.VALUE_POS, 1, 4)
-    
+
     def create_config_row(self, options: Dict, row_num: int) -> None:
         active = options.get("active", False)
         name = options.get("name", "undefined")

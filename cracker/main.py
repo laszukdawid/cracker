@@ -10,12 +10,12 @@ from cracker.cracker import Cracker
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName('Cracker')
+    app.setApplicationName("Cracker")
 
     cracker = Cracker(app)
     cracker.run()
 
-    icon = QIcon('icon.png')
+    icon = QIcon("icon.png")
     tray = QSystemTrayIcon(icon)
     tray.setIcon(icon)
     tray.setVisible(True)

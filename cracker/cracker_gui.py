@@ -196,7 +196,7 @@ class MainWindow(QMainWindow):
         self.close()
 
     def save_config(self):
-        self._logger.info("Saving user config")
+        self._logger.debug("Saving user config")
         self.config.save_user_config()
 
     def change_speaker(self, speaker_name: str):

@@ -18,7 +18,7 @@ class KeyBoardManager(QObject):
     def stop(self):
         self._pressed.clear()
         self.listener.stop()
-    
+
     def on_press(self, key):
         self._pressed |= {key}
 

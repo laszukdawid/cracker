@@ -8,8 +8,8 @@ from cracker.cracker_gui import MainWindow
 from cracker.keylogger import KeyBoardManager
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
-from cracker.speaker.polly import Polly
 from cracker.speaker.google import Google
+from cracker.speaker.polly import Polly
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
 
@@ -28,7 +28,9 @@ class Cracker(object):
         _ = self.config.read_config()
 
         self.player = QMediaPlayer()
-        self.speaker: AbstractSpeaker = self.get_speaker(self.config.speaker, self.player)
+        self.speaker: AbstractSpeaker = self.get_speaker(
+            self.config.speaker, self.player
+        )
         self.textParser = TextParser(config_path=self.config.parser_config)
 
         self.gui = MainWindow(self.config, speakers=self.SPEAKER)
@@ -47,18 +49,23 @@ class Cracker(object):
         self.key_manager.stop()
 
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
+        config = self.config.read_config()
         if speaker_name == Polly.__name__:
-            if "profile_name" in self.config.default_values:
-                profile_name = self.config.default_values["profile_name"]
-                return Polly(player, profile_name)
-            else:
-                return Polly(player)
+            self._logger.info("Using AWS Polly")
+            profile_name = config.get("polly", {}).get("profile_name", "default")
+            self._logger.debug("Using AWS profile: %s", profile_name)
+            return Polly(player, profile_name)
         elif speaker_name == Google.__name__:
-            credentials_file = self.config.default_values.get("credentials_file", None)
+            self._logger.info("Using Google TTS")
+            credentials_file = config.get("google", {}).get("credentials_file")
+            self._logger.debug("Using credentials file: %s", credentials_file)
             return Google(player, credentials_file)
         elif speaker_name == Espeak.__name__:
+            self._logger.info("Using ESpeak")
             return Espeak(player)
-        raise ValueError(f"No speaker was selected. Provided speaker name '{speaker_name}'")
+        raise ValueError(
+            f"No speaker was selected. Provided speaker name '{speaker_name}'"
+        )
 
     def run(self):
         self.gui.init()
@@ -121,20 +128,25 @@ class Cracker(object):
         self.speaker.stop_text()
 
     def _prepare_config(self):
-        config = dict(rate=self.gui.rate, volume=self.gui.volume, voice=self.gui.config.voice)
+        config = dict(
+            rate=self.gui.rate, volume=self.gui.volume, voice=self.gui.config.voice
+        )
         return config
 
     def change_speaker(self, speaker_name):
         """Action on changing speaker.
 
-        Important: Each speaker has its own configuration. These values should be updated on change."""
+        Important: Each speaker has its own configuration. These values should be updated on change.
+        """
         self.speaker = self.SPEAKER[speaker_name](self.player)
         self.gui.change_speaker(speaker_name)
 
     def set_action(self):
         self.gui.stop_action.triggered.connect(self.stop_text)
         self.gui.read_action.triggered.connect(self.read_text_area)
-        self.gui.clipboard_read_action.triggered.connect(self.toggle_read_text_clipboard)
+        self.gui.clipboard_read_action.triggered.connect(
+            self.toggle_read_text_clipboard
+        )
         self.gui.toggle_action.triggered.connect(self.toggle_read)
         self.gui.reduce_action.triggered.connect(self.reduce_text)
         self.gui.wiki_action.triggered.connect(self.wiki_text)
@@ -142,6 +154,6 @@ class Cracker(object):
 
         self.key_manager.GlobalReadSignal.connect(self.toggle_read_text_clipboard)
 
-        args = (["space", "ctrl", "shift"], )
+        args = (["space", "ctrl", "shift"],)
         p = Thread(target=self.key_manager.run, args=args)
         p.start()

@@ -29,3 +29,7 @@ version = {attr = "cracker.__version__"}
 
 [tool.isort]
 line_length = 120
+profile = "black"
+
+[tool.black]
+max-line-length = 120
