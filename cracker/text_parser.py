@@ -7,15 +7,13 @@ from typing import Optional
 
 
 class TextParser:
-
     _logger = logging.getLogger(__name__)
 
-    citation_author_year = re.compile(r'[\(\[]\w+, \d{4}(;\s\w+, \d{4})*[\)\]]')
-    citation_numbers_comma = re.compile(r'\[\d+(,\s*\d+)*\]')
+    citation_author_year = re.compile(r"[\(\[]\w+, \d{4}(;\s\w+, \d{4})*[\)\]]")
+    citation_numbers_comma = re.compile(r"\[\d+(,\s*\d+)*\]")
 
     # TODO: There shoudldn't be both `config_path` and `config`
     def __init__(self, config_path: Optional[str] = None):
-
         self._config = None
         self._parser_rules = None
         self._regex_rules = OrderedDict()
@@ -32,11 +30,11 @@ class TextParser:
     def config(self, config):
         self._config = config
         self.update_config()
-    
+
     @property
     def parser_rules(self):
         return self._parser_rules
-    
+
     @parser_rules.setter
     def parser_rules(self, parser_rules):
         assert self._config, "Need to provide config before parser"
@@ -62,9 +60,9 @@ class TextParser:
         self._regex_rules.clear()
 
         for rule in self.config["parser_rules"]:
-            if not rule['active']:
+            if not rule["active"]:
                 continue
-            self._regex_rules[rule['key']] = rule['value']
+            self._regex_rules[rule["key"]] = rule["value"]
 
     @classmethod
     def reduce_cite(cls, text: str) -> str:
@@ -76,9 +74,9 @@ class TextParser:
     @staticmethod
     def wiki_text(text: str) -> str:
         """Convert direct copy from Wikipedia into human-readable form."""
-        text = re.sub(r'\[+[0-9]+\]', '', text)
-        text = text.replace("[clarification needed]", '')
-        text = text.replace("[citation needed]", '')
+        text = re.sub(r"\[+[0-9]+\]", "", text)
+        text = text.replace("[clarification needed]", "")
+        text = text.replace("[citation needed]", "")
         return text
 
     @staticmethod
@@ -87,7 +85,7 @@ class TextParser:
         while len(doc_residue) > max_char:
             # TODO: Should the split be by whitespace if no '. ' ?
             part = doc_residue[:max_char].rsplit(". ", 1)[0]
-            doc_residue = doc_residue[len(part):]
+            doc_residue = doc_residue[len(part) :]
             yield part
         yield doc_residue
 

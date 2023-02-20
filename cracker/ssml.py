@@ -1,9 +1,8 @@
-
 class SSML:
     """Converts text to annotated SSML form."""
 
     def __init__(self, text=None, rate=None, volume=None):
-        self.ssml = ''
+        self.ssml = ""
         self._rate = rate
         self._volume = volume
         if text is not None:
@@ -17,7 +16,7 @@ class SSML:
                 _prosody.append('rate="{rate}"'.format(rate=self._rate))
             if self._volume is not None:
                 _prosody.append('volume="{volume}"'.format(volume=self._volume))
-            prosody = "<" + ' '.join(_prosody) + ">"
+            prosody = "<" + " ".join(_prosody) + ">"
             self.ssml = prosody + self.ssml + "</prosody>"
 
     def __str__(self):

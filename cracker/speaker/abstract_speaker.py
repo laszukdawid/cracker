@@ -13,8 +13,8 @@ class AbstractSpeaker(abc.ABC):
     RATES = []
     VOLUMES = []
     text_cleaners = [
-        (re.compile(r'\n'), '. '),
-        (re.compile(r'&'), 'and'),
+        (re.compile(r"\n"), ". "),
+        (re.compile(r"&"), "and"),
     ]
 
     @abc.abstractmethod

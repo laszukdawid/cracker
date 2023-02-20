@@ -7,6 +7,10 @@ clean:
 	rm cracker.egg-info 2> /dev/null || true
 	rm -r build dist  2> /dev/null || true
 
+format-code:
+	python -m isort cracker
+	python -m black cracker
+
 upgrade:
 	pip install --upgrade pip setuptools
 

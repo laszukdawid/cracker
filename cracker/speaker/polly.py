@@ -37,10 +37,13 @@ class Polly(AbstractSpeaker):
     def _connect_aws(self, profile_name: str):
         try:
             session = boto3.Session(profile_name=profile_name)
-            self.client = session.client('polly')
+            self.client = session.client("polly")
         except Exception as e:
-            self._logger.exception("Unable to connect to AWS with the profile '%s'. "
-                                   "Please verify that configuration file exists.", profile_name)
+            self._logger.exception(
+                "Unable to connect to AWS with the profile '%s'. "
+                "Please verify that configuration file exists.",
+                profile_name,
+            )
             raise e
 
     def save_cache(self, ssml: SSML, filepaths: List[str], voice):
@@ -54,9 +57,9 @@ class Polly(AbstractSpeaker):
         text = TextParser.escape_tags(text)
         split_text = TextParser.split_text(text)
 
-        rate = config.get('rate')
-        volume = config.get('volume')
-        voice = config.get('voice')
+        rate = config.get("rate")
+        volume = config.get("volume")
+        voice = config.get("voice")
         assert voice, "Voice needs to be provided"  # TODO: Does it?
 
         ssml = SSML(text, rate=rate, volume=volume)
@@ -87,12 +90,7 @@ class Polly(AbstractSpeaker):
     @staticmethod
     def create_speech(ssml_text: str, voice: str):
         """Prepares speech query to Polly"""
-        return dict(
-            OutputFormat='mp3',
-            TextType='ssml',
-            Text=ssml_text,
-            VoiceId=voice
-        )
+        return dict(OutputFormat="mp3", TextType="ssml", Text=ssml_text, VoiceId=voice)
 
     def play_files(self, filepaths):
         playlist = QMediaPlaylist(self.player)
