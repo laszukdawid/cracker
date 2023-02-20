@@ -53,7 +53,7 @@ Package is currently heavily favouring Ubuntu as end OS. If you are one of the l
 
 ```shell
 $ sudo sh install.sh
-$ pip install -r requirements.txt
+$ pip install -r .
 ```
 
 For other OS you'd need *PyQt5* and *vlc*. 
