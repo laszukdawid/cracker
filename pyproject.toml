@@ -8,7 +8,9 @@ dependencies = [
   "python-vlc==3.*",
   "pyqt5==5.15.*",
   "pynput==1.7.*",
+  "pyttsx3==2.90.*",
   "google-cloud-texttospeech==2.5.*",
+  "darkdetect==0.8.*",
 ]
 name = "cracker"
 readme = "README.md"

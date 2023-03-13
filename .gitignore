@@ -1,6 +1,9 @@
 *.pyc
 __pycache__/
+
 .venv/
+.direnv
+.envrc
 
 *.egg-info/
 dist/
