@@ -29,7 +29,9 @@ class Google(AbstractSpeaker):
             if credentials_file is not None:
                 self._logger.info("Using credentials file: %s", credentials_file)
                 full_path = os.path.expanduser(credentials_file)
-                self.client = texttospeech.TextToSpeechClient.from_service_account_json(full_path)
+                self.client = texttospeech.TextToSpeechClient.from_service_account_json(
+                    full_path
+                )
             else:
                 self._logger.info("Using default credentials file")
                 self.client = texttospeech.TextToSpeechClient()
@@ -62,9 +64,13 @@ class Google(AbstractSpeaker):
         self.play_files(filepaths)
 
     def ask_google(self, text: str, voice):
-        audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3
+        )
         synth_speech = texttospeech.SynthesisInput(text=text)
-        response = self.client.synthesize_speech(input=synth_speech, voice=voice, audio_config=audio_config)
+        response = self.client.synthesize_speech(
+            input=synth_speech, voice=voice, audio_config=audio_config
+        )
         return response
 
     def play_files(self, filepaths):

@@ -2,8 +2,18 @@ from typing import Dict, Optional, Type, Union
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtMultimedia import QMediaPlayer
-from PyQt5.QtWidgets import (QAction, QComboBox, QGridLayout, QLabel, QMainWindow, QSlider, QSpinBox, QTextEdit,
-                             QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (
+    QAction,
+    QComboBox,
+    QGridLayout,
+    QLabel,
+    QMainWindow,
+    QSlider,
+    QSpinBox,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from cracker.configuration import Configuration
 from cracker.speaker.abstract_speaker import AbstractSpeaker
@@ -25,7 +35,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.resize(800, 250)
-        self.setWindowTitle('Cracker GUI')
+        self.setWindowTitle("Cracker GUI")
 
         self.config = config
 
@@ -43,80 +53,80 @@ class MainWindow(QMainWindow):
 
     def set_action(self):
         assert self.player, "Cannot set actions on non-defined Player"
-        _exit = QAction('Exit', self)
-        _exit.setShortcut('Ctrl+Q')
-        _exit.setStatusTip('Exit application')
+        _exit = QAction("Exit", self)
+        _exit.setShortcut("Ctrl+Q")
+        _exit.setStatusTip("Exit application")
         _exit.triggered.connect(self.closeEvent)
 
-        _save = QAction('Save config', self)
-        _save.setShortcut('Ctrl+S')
-        _save.setStatusTip('Save configure')
+        _save = QAction("Save config", self)
+        _save.setShortcut("Ctrl+S")
+        _save.setStatusTip("Save configure")
         _save.triggered.connect(self.save_config)
 
-        self.stop_action = QAction('Stop', self)
-        self.stop_action.setShortcut('Ctrl+Shift+S')
-        self.stop_action.setStatusTip('Stops text')
+        self.stop_action = QAction("Stop", self)
+        self.stop_action.setShortcut("Ctrl+Shift+S")
+        self.stop_action.setStatusTip("Stops text")
 
-        self.read_action = QAction('Read', self)
-        self.read_action.setShortcut('Ctrl+Shift+R')
-        self.read_action.setStatusTip('Reduces provided text')
+        self.read_action = QAction("Read", self)
+        self.read_action.setShortcut("Ctrl+Shift+R")
+        self.read_action.setStatusTip("Reduces provided text")
 
-        self.clipboard_read_action = QAction('Read (clipboard)', self)
-        self.clipboard_read_action.setShortcut('Ctrl+Shift+Space')
-        self.clipboard_read_action.setStatusTip('Reads text from clipboard')
+        self.clipboard_read_action = QAction("Read (clipboard)", self)
+        self.clipboard_read_action.setShortcut("Ctrl+Shift+Space")
+        self.clipboard_read_action.setStatusTip("Reads text from clipboard")
 
         # TODO: This, and above, should be buttons, so that the width doesn't change
-        self.toggle_action = QAction('Pause', self)
+        self.toggle_action = QAction("Pause", self)
         self.toggle_action.setDisabled(True)
-        self.toggle_action.setShortcut('Ctrl+Space')
-        self.toggle_action.setStatusTip('Toggle read')
+        self.toggle_action.setShortcut("Ctrl+Space")
+        self.toggle_action.setStatusTip("Toggle read")
         self.player.stateChanged.connect(self.toggle_label)
 
-        self.reduce_action = QAction('Reduce', self)
-        self.reduce_action.setShortcut('Ctrl+R')
-        self.reduce_action.setStatusTip('Reduces unnecessary text')
+        self.reduce_action = QAction("Reduce", self)
+        self.reduce_action.setShortcut("Ctrl+R")
+        self.reduce_action.setStatusTip("Reduces unnecessary text")
 
-        self.wiki_action = QAction('Wiki', self)
-        self.wiki_action.setShortcut('Ctrl+Shift+W')
-        self.wiki_action.setStatusTip('Reduces wiki citations')
+        self.wiki_action = QAction("Wiki", self)
+        self.wiki_action.setShortcut("Ctrl+Shift+W")
+        self.wiki_action.setStatusTip("Reduces wiki citations")
 
-        self.cite_action = QAction('Citation', self)
-        self.cite_action.setShortcut('Ctrl+Shift+C')
-        self.cite_action.setStatusTip('Citation')
+        self.cite_action = QAction("Citation", self)
+        self.cite_action.setShortcut("Ctrl+Shift+C")
+        self.cite_action.setStatusTip("Citation")
 
-        self.toggle_config_window = QAction('Config', self)
-        self.toggle_config_window.setStatusTip('Opens configuration')
+        self.toggle_config_window = QAction("Config", self)
+        self.toggle_config_window.setStatusTip("Opens configuration")
         self.toggle_config_window.triggered.connect(self.config_window.show)
 
         # MenuBar and ToolBar
         menubar = self.menuBar()
 
-        fileAction = menubar.addMenu('&File')
+        fileAction = menubar.addMenu("&File")
         fileAction.addAction(_save)
         fileAction.addAction(_exit)
-        textAction = menubar.addMenu('&Text')
+        textAction = menubar.addMenu("&Text")
         textAction.addAction(self.read_action)
         textAction.addAction(self.clipboard_read_action)
         textAction.addAction(self.stop_action)
         textAction.addAction(self.toggle_action)
-        reduceAction = menubar.addMenu('&Reduce')
+        reduceAction = menubar.addMenu("&Reduce")
         reduceAction.addAction(self.reduce_action)
         reduceAction.addAction(self.wiki_action)
         reduceAction.addAction(self.cite_action)
 
         # toolbarExit = self.addToolBar('Exit')
         # toolbarExit.addAction(_exit)
-        toolbarText = self.addToolBar('Text')
+        toolbarText = self.addToolBar("Text")
         toolbarText.addAction(self.read_action)
         toolbarText.addAction(self.clipboard_read_action)
         toolbarText.addAction(self.stop_action)
         toolbarText.addAction(self.toggle_action)
-        toolbarReduce = self.addToolBar('Reduce')
+        toolbarReduce = self.addToolBar("Reduce")
         toolbarReduce.addAction(self.reduce_action)
         toolbarReduce.addAction(self.wiki_action)
         toolbarReduce.addAction(self.cite_action)
 
-        toolbarConfig = self.addToolBar('Config')
+        toolbarConfig = self.addToolBar("Config")
         toolbarConfig.addAction(self.toggle_config_window)
 
     def set_widgets(self):
@@ -134,7 +144,9 @@ class MainWindow(QMainWindow):
         self.speakerLabel = QLabel("Speaker:")
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.speakers.keys())
-        self.speakerW.setCurrentIndex(list(self.speakers.keys()).index(self.config.speaker))
+        self.speakerW.setCurrentIndex(
+            list(self.speakers.keys()).index(self.config.speaker)
+        )
         self.speakerW.currentTextChanged.connect(self.change_speaker)
         menuLayout.addWidget(self.speakerLabel, 0, 0)
         menuLayout.addWidget(self.speakerW, 1, 0)

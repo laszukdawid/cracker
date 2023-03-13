@@ -85,10 +85,18 @@ class Configuration:
         assert self.default_config
         config = self._read_user_config(self.default_config)
 
-        config["Cracker"]["speaker"] = self.speaker or self.default_config["Cracker"]["speaker"]
-        config["Cracker"]["language"] = self.language or self.default_config["Cracker"]["language"]
-        config["Cracker"]["speed"] = str(self.speed) or self.default_config["Cracker"]["speed"]
-        config["Cracker"]["voice"] = self.voice or self.default_config["Cracker"]["voice"]
+        config["Cracker"]["speaker"] = (
+            self.speaker or self.default_config["Cracker"]["speaker"]
+        )
+        config["Cracker"]["language"] = (
+            self.language or self.default_config["Cracker"]["language"]
+        )
+        config["Cracker"]["speed"] = (
+            str(self.speed) or self.default_config["Cracker"]["speed"]
+        )
+        config["Cracker"]["voice"] = (
+            self.voice or self.default_config["Cracker"]["voice"]
+        )
 
         with open(self.user_config_path, "w") as f:
             config.write(f)

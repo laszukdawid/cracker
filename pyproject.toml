@@ -20,7 +20,7 @@ dynamic = ["version"]
 cracker = "cracker.main:main"
 
 [project.optional-dependencies]
-dev = ["black", "isort", "pycodestyle"]
+dev = ["black==23.1.*", "isort==5.12.*", "pycodestyle"]
 build = ["setuptools>=61", "build", "twine"]
 
 [tool.setuptools]
