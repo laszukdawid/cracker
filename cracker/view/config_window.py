@@ -2,7 +2,14 @@ import json
 import logging
 from typing import Any, Dict, Optional
 
-from PyQt5.QtWidgets import QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton, QWidget
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QWidget,
+)
 
 from cracker.configuration import Configuration
 
@@ -82,8 +89,12 @@ class ConfigWindow(QWidget):
         assert self.regex_config, "Regex config hasn't been loaded"
         regex_config_options_layout = self.layout.itemAtPosition(0, 0).widget().layout
         for row in range(1, regex_config_options_layout.rowCount()):
-            active_box = regex_config_options_layout.itemAtPosition(row, RegexConfigOptions.ACTIVE_POS).widget()
-            name_widget = regex_config_options_layout.itemAtPosition(row, RegexConfigOptions.NAME_POS).widget()
+            active_box = regex_config_options_layout.itemAtPosition(
+                row, RegexConfigOptions.ACTIVE_POS
+            ).widget()
+            name_widget = regex_config_options_layout.itemAtPosition(
+                row, RegexConfigOptions.NAME_POS
+            ).widget()
             name = name_widget.text()
             if name in self.regex_config:
                 self.regex_config[name]["active"] = active_box.isChecked()
