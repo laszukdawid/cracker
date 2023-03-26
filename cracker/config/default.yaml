@@ -1,0 +1,18 @@
+cracker:
+  language: english
+  speaker: polly
+  speed: 4
+  parser_config: cracker/config/parser.json
+
+speakers:
+  polly:
+    voice: Joanna
+    profile_name: polly
+
+  espeak:
+    voice: english
+
+  google:
+    voice: en-US
+    credentials_file: ~/.google-tts.json
+

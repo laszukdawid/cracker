@@ -1,0 +1,52 @@
+{
+  "parser_rules": [
+    {
+      "name": "citation_compact_all",
+      "active": true,
+      "key": "[\\(\\[](((and\\s)?[A-Z]\\w+(\\set\\sal\\.)?\\W?\\s)+\\d{4}([;]\\s)?)+[\\)\\]]",
+      "value": ""
+    },
+    {
+      "name": "citation_author_year",
+      "active": false,
+      "key": "[\\(\\[](([A-Z]\\w+(\\set\\sal\\.)?,\\s\\d{4})([;]\\s)?){1,}[\\]\\)]",
+      "value": ""
+    },
+    {
+      "name": "citation_numbers_comma",
+      "active": false,
+      "key": "\\[\\d+(,\\s*\\d+)*\\]",
+      "value": ""
+    },
+    {
+      "name": "extensive_new_line",
+      "active": true,
+      "key": "\\n\\s*?(?=[a-z])",
+      "value": " "
+    },
+    {
+      "name": "hypthened_new_line",
+      "active": true,
+      "key": "-\\n",
+      "value": ""
+    },
+    {
+      "name": "just_dash",
+      "active": true,
+      "key": "- ",
+      "value": ""
+    },
+    {
+      "name": "tabs",
+      "active": true,
+      "key": "\\t",
+      "value": " "
+    },
+    {
+      "name": "trailing_whitespace",
+      "active": false,
+      "key": "\\b\\s+\\.",
+      "value": "."
+    }
+  ]
+}

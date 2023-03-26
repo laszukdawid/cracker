@@ -6,6 +6,7 @@ from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
 from cracker.mp3_helper import create_filename, save_mp3
+from cracker.speaker import GOOGLE_LANGUAGES
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
@@ -19,6 +20,8 @@ class Google(AbstractSpeaker):
     MIN_VOLUME, MAX_VOLUME = 0, 200
     RATES = [80, 120, 160, 200, 240]
     VOLUMES = range(100)
+
+    LANGUAGES = GOOGLE_LANGUAGES
 
     def __init__(self, player, credentials_file: Optional[str] = None):
         self._connect_google(credentials_file)

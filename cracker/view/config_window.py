@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from cracker.configuration import Configuration
+from cracker.config import Configuration
 
 
 class ConfigWindow(QWidget):
