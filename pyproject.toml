@@ -22,12 +22,13 @@ cracker = "cracker.main:main"
 [project.optional-dependencies]
 dev = ["black==23.1.*", "isort==5.12.*", "pycodestyle"]
 build = ["setuptools>=61", "build", "twine"]
-
-[tool.setuptools]
-packages = ["cracker"]
+test = ["pytest"]
 
 [tool.setuptools.dynamic]
 version = {attr = "cracker.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["cracker*"]
 
 [tool.isort]
 line_length = 120
