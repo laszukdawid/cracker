@@ -6,6 +6,7 @@ from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
 from cracker.mp3_helper import create_filename, save_mp3
+from cracker.speaker import POLLY_LANGUAGES
 from cracker.ssml import SSML
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
@@ -20,6 +21,8 @@ class Polly(AbstractSpeaker):
 
     RATES = ["x-slow", "slow", "medium", "fast", "x-fast"]
     VOLUMES = ["x-soft", "soft", "medium", "loud", "x-loud"]
+
+    LANGUAGES = POLLY_LANGUAGES
 
     def __init__(self, player, profile_name="default"):
         self._cached_ssml = SSML()

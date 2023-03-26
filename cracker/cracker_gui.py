@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from cracker.configuration import Configuration
+from cracker.config import Configuration
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
 from cracker.speaker.polly import Polly
@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.speakers.keys())
         self.speakerW.setCurrentIndex(
-            list(self.speakers.keys()).index(self.config.speaker)
+            list(self.speakers.keys()).index(self.config.speaker.capitalize())
         )
         self.speakerW.currentTextChanged.connect(self.change_speaker)
         menuLayout.addWidget(self.speakerLabel, 0, 0)

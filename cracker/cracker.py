@@ -3,7 +3,7 @@ from threading import Thread
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtWidgets import QApplication
 
-from cracker.configuration import Configuration
+from cracker.config import Configuration
 from cracker.cracker_gui import MainWindow
 from cracker.keylogger import KeyBoardManager
 from cracker.speaker.abstract_speaker import AbstractSpeaker
@@ -50,17 +50,17 @@ class Cracker(object):
 
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         config = self.config.read_config()
-        if speaker_name == Polly.__name__:
+        if speaker_name == Polly.__name__.lower():
             self._logger.info("Using AWS Polly")
             profile_name = config.get("polly", {}).get("profile_name", "default")
             self._logger.debug("Using AWS profile: %s", profile_name)
             return Polly(player, profile_name)
-        elif speaker_name == Google.__name__:
+        elif speaker_name == Google.__name__.lower():
             self._logger.info("Using Google TTS")
             credentials_file = config.get("google", {}).get("credentials_file")
             self._logger.debug("Using credentials file: %s", credentials_file)
             return Google(player, credentials_file)
-        elif speaker_name == Espeak.__name__:
+        elif speaker_name == Espeak.__name__.lower():
             self._logger.info("Using ESpeak")
             return Espeak(player)
         raise ValueError(

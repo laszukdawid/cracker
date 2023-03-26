@@ -1,0 +1,57 @@
+{
+  "Polly": {
+    "Languages": {
+      "English": [
+        "Joanna",
+        "Salli",
+        "Kimberly",
+        "Kendra",
+        "Ivy",
+        "Matthew",
+        "Justin",
+        "Joey"
+      ],
+      "Polish": [
+        "Ewa",
+        "Maja",
+        "Jan",
+        "Jacek"
+      ],
+      "Spanish": [
+        "Penelope",
+        "Miguel"
+      ]
+    }
+  },
+  "Google": {
+    "Languages": {
+      "English": [
+        "en-US",
+        "en-GB",
+        "en-AU",
+        "en-CA",
+        "en-IN"
+      ],
+      "Polish": [
+        "pl-PL"
+      ],
+      "Spanish": [
+        "es-ES",
+        "es-US"
+      ]
+    }
+  },
+  "Espeak": {
+    "Languages": {
+      "English": [
+        "english"
+      ],
+      "Polish": [
+        "polish"
+      ],
+      "Spanish": [
+        "spanish"
+      ]
+    }
+  }
+}

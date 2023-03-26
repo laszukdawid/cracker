@@ -11,6 +11,7 @@ dependencies = [
   "pyttsx3==2.90.*",
   "google-cloud-texttospeech==2.5.*",
   "darkdetect==0.8.*",
+  "pyyaml",
 ]
 name = "cracker"
 readme = "README.md"
@@ -36,3 +37,13 @@ profile = "black"
 
 [tool.black]
 max-line-length = 120
+
+[tool.pytest.ini_options]
+addopts = "-p no:warnings"
+filterwarnings = [
+    #"error",
+    #"ignore::UserWarning",
+    # note the use of single quote below to denote "raw" strings in TOML
+    #'ignore:function ham\(\) is deprecated:DeprecationWarning',
+    'ignore:DeprecationWarning',
+]

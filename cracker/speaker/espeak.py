@@ -3,8 +3,10 @@ import subprocess
 
 from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent
+from cracker.speaker import ESPEAK_LANGUAGES
 
 from cracker.utils import get_logger
+
 
 from .abstract_speaker import AbstractSpeaker
 
@@ -19,6 +21,8 @@ class Espeak(AbstractSpeaker):
     MIN_VOLUME, MAX_VOLUME = 0, 200
     RATES = [80, 120, 160, 200, 240]
     VOLUMES = range(100)
+
+    LANGUAGES = ESPEAK_LANGUAGES
 
     def __init__(self, player):
         self.player = player
