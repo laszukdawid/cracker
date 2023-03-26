@@ -4,7 +4,7 @@ build:
 clean:
 	find cracker -name "*.pyc" -exec rm {} +
 	find cracker -name "__pycache__" -prune -exec rm -r {} +
-	rm cracker.egg-info 2> /dev/null || true
+	rm -r cracker.egg-info 2> /dev/null || true
 	rm -r build dist  2> /dev/null || true
 
 format-code:
@@ -22,3 +22,6 @@ install-all: upgrade
 
 publish:
 	python -m twine upload -r cracker dist/*
+
+test:
+	python -m pytest -v

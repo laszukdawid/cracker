@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 from configparser import ConfigParser
 from typing import Any, Dict
