@@ -1,15 +1,9 @@
 import json
 import logging
+import pkgutil
 from typing import Any, Dict, Optional
 
-from PyQt5.QtWidgets import (
-    QCheckBox,
-    QGridLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QWidget,
-)
+from PyQt5.QtWidgets import QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton, QWidget
 
 from cracker.config import Configuration
 
@@ -68,8 +62,10 @@ class ConfigWindow(QWidget):
 
         regex_config_list = {}
         try:
-            with open(self.regex_file_path) as f:
-                regex_config_list = json.loads(f.read())
+            file_content = pkgutil.get_data("cracker", self.regex_file_path)
+            if file_content is None:
+                raise FileNotFoundError(f"Could not find config file {self.regex_file_path}")
+            regex_config_list = json.loads(file_content.decode("utf-8"))
         except Exception:
             self._logger.exception("While reading config")
 

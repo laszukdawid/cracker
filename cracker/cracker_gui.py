@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         self.set_action()
         self.set_widgets()
         self.init_values()
-        self.config_window.init(regex_file_path=self.config.parser_config)
+        self.config_window.init(regex_file_path=self.config.parser_config_path)
 
     def set_action(self):
         assert self.player, "Cannot set actions on non-defined Player"
@@ -144,6 +144,7 @@ class MainWindow(QMainWindow):
         self.speakerLabel = QLabel("Speaker:")
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.speakers.keys())
+        self.speakerW.setMinimumContentsLength(10)
         self.speakerW.setCurrentIndex(
             list(self.speakers.keys()).index(self.config.speaker.capitalize())
         )
@@ -174,6 +175,7 @@ class MainWindow(QMainWindow):
         langW.addItems(self.config.languages)
         langW.setCurrentIndex(self.config.languages.index(self.config.language))
         langW.currentTextChanged.connect(self.change_language)
+        langW.setMinimumContentsLength(10)
         menuLayout.addWidget(langLabel, 0, 1)
         menuLayout.addWidget(langW, 1, 1)
 
@@ -182,7 +184,7 @@ class MainWindow(QMainWindow):
         self.voiceW = QComboBox(self)
         self.voiceW.addItems(self.config.lang_voices)
         self.voiceW.setCurrentIndex(self.config.lang_voices.index(self.config.voice))
-        self.voiceW.setGeometry(500, 27, 20, 20)
+        self.voiceW.setMinimumContentsLength(12)
         self.voiceW.currentTextChanged.connect(self.change_voice)
         menuLayout.addWidget(voiceLabel, 0, 2)
         menuLayout.addWidget(self.voiceW, 1, 2)
@@ -219,7 +221,7 @@ class MainWindow(QMainWindow):
         """
         self.speaker = self.speakers[speaker_name](self.player)
         self.config.speaker = speaker_name
-        self.config.load_config(speaker_name)
+        self.config.load_speaker_config(speaker_name)
         self.init_values()
 
     def change_volume(self, volume):

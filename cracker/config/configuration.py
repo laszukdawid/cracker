@@ -1,13 +1,12 @@
 import json
 import os
+import pkgutil
 from typing import Any, Dict
 
-from google.api_core.gapic_v1 import config
-
-from cracker.utils import get_logger
-from cracker.speaker import LANGUAGES
-
 import yaml
+
+from cracker.speaker import LANGUAGES
+from cracker.utils import get_logger
 
 
 class Configuration:
@@ -17,7 +16,7 @@ class Configuration:
     _logger = get_logger(__name__)
 
     language_file = "voices.json"
-    DEFAULT_CONFIG_PATH = "cracker/config/default.yaml"
+    DEFAULT_CONFIG_PATH = "config/default.yaml"
     USER_CONFIG_DIR_PATH = os.path.expanduser("~/.config/cracker")
 
     languages = []
@@ -53,7 +52,10 @@ class Configuration:
         return self.apply_config(config)
 
     def read_default_config(self) -> Dict:
-        return self._read_yaml(self.DEFAULT_CONFIG_PATH)
+        data = pkgutil.get_data("cracker", self.DEFAULT_CONFIG_PATH)
+        if data is None:
+            raise FileNotFoundError(f"Could not find config file {self.DEFAULT_CONFIG_PATH}")
+        return yaml.safe_load(data.decode("utf-8"))
 
     def _read_yaml(self, path: str) -> Dict:
         with open(path, "r") as f:
@@ -116,11 +118,11 @@ class Configuration:
 
         # Current setting
         _config = {}
-        _config["parser_config"] = self.parser_config = config["parser_config"]
+        _config["parser_config_path"] = self.parser_config_path = config["parser_config_path"]
         _config["speaker"] = self.speaker = config["speaker"]
         _config["language"] = self.language = config["language"]
         _config["speed"] = self.speed = int(config["speed"])
-        _config["voice"] = self.voice = config_speakers[self.speaker].get("voice", "")
+        _config["voice"] = self.voice = config_speakers[self.speaker.lower()].get("voice", "")
 
         # Augment setting based on speaker
         speaker_config = self.load_speaker_config(self.speaker, self.language)
@@ -141,7 +143,7 @@ class Configuration:
         if self.voice not in self.lang_voices:
             _config["voice"] = self.voice = self.lang_voices[0]
 
-        if self.parser_config is not None:
+        if self.parser_config_path is not None:
             self.regex_config = self.load_regex_config()
 
         return _config
@@ -158,7 +160,7 @@ class Configuration:
 
         """
         config = {}
-        config["voices"] = self.voices = LANGUAGES[speaker]
+        config["voices"] = self.voices = LANGUAGES[speaker.lower()]
         config["languages"] = self.languages = list(self.voices.keys())
         if language is None:
             language = self.language
@@ -172,11 +174,9 @@ class Configuration:
     def load_regex_config(self):
         """From provided path to a config it extracts configuration for the TextParser"""
         regex_config = None
-        try:
-            with open(self.parser_config) as f:
-                regex_config = json.loads(f.read())["parser_rules"]
-        except Exception as e:
-            self._logger.exception("While reading config")
-
+        file_content = pkgutil.get_data("cracker", self.parser_config_path)
+        if file_content is None:
+            raise FileNotFoundError(f"Could not find config file {self.parser_config_path}")
+        regex_config = json.loads(file_content.decode("utf-8"))["parser_rules"]
         return regex_config
 

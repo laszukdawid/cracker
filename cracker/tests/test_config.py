@@ -1,5 +1,6 @@
-from cracker.config import Configuration
 from unittest.mock import MagicMock, patch
+
+from cracker.config import Configuration
 
 
 def test_read_config_defaul():
@@ -10,7 +11,7 @@ def test_read_config_defaul():
     cracker_config = default_config["cracker"]
     assert cracker_config["speaker"] == "polly"
     assert cracker_config["speed"] == 4
-    assert cracker_config["language"] == "english"
+    assert cracker_config["language"] == "English"
 
 
 @patch("cracker.config.configuration.os.path.isdir", return_value=False)
@@ -19,7 +20,7 @@ def test_read_config(mock_isdir):
     config.read_config()
     assert config.speaker == "polly"
     assert config.speed == 4
-    assert config.language == "english"
+    assert config.language == "English"
 
     mock_isdir.assert_called_once_with(config.USER_CONFIG_DIR_PATH)
 
@@ -43,7 +44,7 @@ def test_read_user_config_dir_exists_file_not(mock_isdir, mock_isfile):
 def test_read_user_config_dir_file_exist(mock_isdir, mock_isfile):
     config = Configuration()
     test_config = {
-        "cracker": {"speaker": "polly", "language": "polish", "voice": "maria"}
+        "cracker": {"speaker": "polly", "language": "Polish", "voice": "Maria"}
     }
     config._read_yaml = MagicMock(return_value=test_config)
 
@@ -51,9 +52,9 @@ def test_read_user_config_dir_file_exist(mock_isdir, mock_isfile):
         {
             "cracker": {
                 "speaker": "polly",
-                "language": "english",
+                "language": "English",
                 "speed": 2,
-                "voice": "joanna",
+                "voice": "Joanna",
             }
         }
     )
@@ -61,27 +62,28 @@ def test_read_user_config_dir_file_exist(mock_isdir, mock_isfile):
     assert out == {
         "cracker": {
             "speaker": "polly",
-            "language": "polish",
+            "language": "Polish",
             "speed": 2,
-            "voice": "maria",
+            "voice": "Maria",
         }
     }
 
     mock_isdir.assert_called_once_with(config.USER_CONFIG_DIR_PATH)
     mock_isfile.assert_called_once_with(config.user_config_path)
 
+
 def test_save_user_config():
     config = Configuration()
     config.speaker = "polly"
     config.speed = 2
-    config.language = "english"
-    config.voice = "joanna"
+    config.language = "English"
+    config.voice = "Joanna"
     config._default_config = {
         "cracker": {
             "speaker": "polly",
-            "language": "english",
+            "language": "English",
             "speed": 4,
-            "voice": "joanna",
+            "voice": "Joanna",
         }
     }
     config._write_yaml = MagicMock()
@@ -92,9 +94,9 @@ def test_save_user_config():
         {
             "cracker": {
                 "speaker": "polly",
-                "language": "english",
+                "language": "English",
                 "speed": "2",
-                "voice": "joanna",
+                "voice": "Joanna",
             }
         },
         config.user_config_path,

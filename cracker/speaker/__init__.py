@@ -1,52 +1,52 @@
 ESPEAK_LANGUAGES = {
-    "english": [
-        "english"
+    "English": [
+        "English"
     ],
-    "polish": [
-        "polish"
+    "Polish": [
+        "Polish"
     ],
-    "spanish": [
-        "spanish"
+    "Spanish": [
+        "Spanish"
     ]
 }
 
 GOOGLE_LANGUAGES = {
-    "english": [
-        "en-us",
-        "en-gb",
-        "en-au",
-        "en-ca",
-        "en-in"
+    "English": [
+        "en-US",
+        "en-GB",
+        "en-AU",
+        "en-CA",
+        "en-IN"
     ],
-    "polish": [
-        "pl-pl"
+    "Polish": [
+        "pl-PL"
     ],
-    "spanish": [
-        "es-es",
-        "es-us"
+    "Spanish": [
+        "es-ES",
+        "es-US"
     ]
 }
 
 POLLY_LANGUAGES = {
-    "english": [
-        "joanna",
-        "salli",
-        "kimberly",
-        "kendra",
-        "ivy",
-        "matthew",
-        "justin",
-        "joey"
+    "English": [
+        "Joanna",
+        "Salli",
+        "Kimberly",
+        "Kendra",
+        "Ivy",
+        "Matthew",
+        "Justin",
+        "Joey"
     ],
-    "polish": [
-        "ewa",
-        "maja",
-        "jan",
-        "jacek"
+    "Polish": [
+        "Ewa",
+        "Maja",
+        "Jan",
+        "Jacek"
     ],
-    "spanish": [
-        "penelope",
-        "miguel"
+    "Spanish": [
+        "Penelope",
+        "Miguel"
     ]
 }
 
