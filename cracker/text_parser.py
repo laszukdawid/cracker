@@ -1,6 +1,7 @@
 import html
 import json
 import logging
+import pkgutil
 import re
 from collections import OrderedDict
 from typing import Optional
@@ -12,7 +13,6 @@ class TextParser:
     citation_author_year = re.compile(r"[\(\[]\w+, \d{4}(;\s\w+, \d{4})*[\)\]]")
     citation_numbers_comma = re.compile(r"\[\d+(,\s*\d+)*\]")
 
-    # TODO: There shoudldn't be both `config_path` and `config`
     def __init__(self, config_path: Optional[str] = None):
         self._config = None
         self._parser_rules = None
@@ -44,11 +44,10 @@ class TextParser:
     def read_config_path(self, config_path: str):
         """From provided path to a config it extracts configuration for the TextParser"""
         self._logger.info("parsing read config path")
-
-        config = None
-        # TODO: There should be a check whether file exists
-        with open(config_path) as f:
-            config = json.loads(f.read())
+        file_content = pkgutil.get_data("cracker", config_path)
+        if file_content is None:
+            raise FileNotFoundError(f"Could not find config file {config_path}")
+        config = json.loads(file_content.decode("utf-8"))
         return config
 
     def update_config(self):

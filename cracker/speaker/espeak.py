@@ -3,10 +3,9 @@ import subprocess
 
 from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent
+
 from cracker.speaker import ESPEAK_LANGUAGES
-
 from cracker.utils import get_logger
-
 
 from .abstract_speaker import AbstractSpeaker
 

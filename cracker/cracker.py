@@ -28,10 +28,8 @@ class Cracker(object):
         _ = self.config.read_config()
 
         self.player = QMediaPlayer()
-        self.speaker: AbstractSpeaker = self.get_speaker(
-            self.config.speaker, self.player
-        )
-        self.textParser = TextParser(config_path=self.config.parser_config)
+        self.speaker: AbstractSpeaker = self.get_speaker(self.config.speaker, self.player)
+        self.textParser = TextParser(config_path=self.config.parser_config_path)
 
         self.gui = MainWindow(self.config, speakers=self.SPEAKER)
         self.gui.speaker = self.speaker
@@ -50,17 +48,18 @@ class Cracker(object):
 
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         config = self.config.read_config()
-        if speaker_name == Polly.__name__.lower():
+        _name = speaker_name.lower()
+        if _name == Polly.__name__.lower():
             self._logger.info("Using AWS Polly")
             profile_name = config.get("polly", {}).get("profile_name", "default")
             self._logger.debug("Using AWS profile: %s", profile_name)
             return Polly(player, profile_name)
-        elif speaker_name == Google.__name__.lower():
+        elif _name == Google.__name__.lower():
             self._logger.info("Using Google TTS")
             credentials_file = config.get("google", {}).get("credentials_file")
             self._logger.debug("Using credentials file: %s", credentials_file)
             return Google(player, credentials_file)
-        elif speaker_name == Espeak.__name__.lower():
+        elif _name == Espeak.__name__.lower():
             self._logger.info("Using ESpeak")
             return Espeak(player)
         raise ValueError(

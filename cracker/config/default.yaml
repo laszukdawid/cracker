@@ -1,8 +1,8 @@
 cracker:
-  language: english
+  language: English
   speaker: polly
   speed: 4
-  parser_config: cracker/config/parser.json
+  parser_config_path: config/parser.json
 
 speakers:
   polly:
@@ -10,7 +10,7 @@ speakers:
     profile_name: polly
 
   espeak:
-    voice: english
+    voice: English
 
   google:
     voice: en-US
