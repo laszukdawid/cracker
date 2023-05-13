@@ -145,9 +145,7 @@ class MainWindow(QMainWindow):
         self.speakerW = QComboBox(self)
         self.speakerW.addItems(self.speakers.keys())
         self.speakerW.setMinimumContentsLength(10)
-        self.speakerW.setCurrentIndex(
-            list(self.speakers.keys()).index(self.config.speaker.capitalize())
-        )
+        self.speakerW.setCurrentIndex(list(self.speakers.keys()).index(self.config.speaker.capitalize()))
         self.speakerW.currentTextChanged.connect(self.change_speaker)
         menuLayout.addWidget(self.speakerLabel, 0, 0)
         menuLayout.addWidget(self.speakerW, 1, 0)

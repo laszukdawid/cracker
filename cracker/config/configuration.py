@@ -1,12 +1,12 @@
 import json
 import os
 import pkgutil
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import yaml
 
 from cracker.speaker import LANGUAGES
-from cracker.utils import get_logger
+from cracker.utils import get_logger, deep_dict_merge
 
 
 class Configuration:
@@ -20,7 +20,6 @@ class Configuration:
     USER_CONFIG_DIR_PATH = os.path.expanduser("~/.config/cracker")
 
     languages = []
-    default_values = {}  # Additional values
 
     speaker = None
     language = None
@@ -30,6 +29,7 @@ class Configuration:
     credentials_file = {}
 
     regex_config = None
+    raw_config: Optional[Dict] = None
 
     def __new__(cls, *args, **kwargs):
         if not cls.singleton:
@@ -39,7 +39,7 @@ class Configuration:
     def read_config(self) -> Dict[str, Any]:
         """Reads configuration from file system.
 
-        Firstly checks whether there are any user defined config in ~/.cracker/.
+        Firstly checks whether there are any user defined config in ~/.config/cracker/.
         If config isn't there then it takes the default.
         """
         # Check defaults
@@ -49,7 +49,8 @@ class Configuration:
         if os.path.isdir(self.USER_CONFIG_DIR_PATH):
             config = self._read_user_config(self.default_config)
 
-        return self.apply_config(config)
+        self.raw_config = self.apply_config(config)
+        return self.raw_config
 
     def read_default_config(self) -> Dict:
         data = pkgutil.get_data("cracker", self.DEFAULT_CONFIG_PATH)
@@ -61,7 +62,7 @@ class Configuration:
         with open(path, "r") as f:
             return yaml.safe_load(f)
 
-    def _write_yaml(self, config: Dict, path: str):
+    def _write_yaml(self, config: Dict):
         """Writes configuration to file system."""
         with open(self.user_config_path, "w") as f:
             yaml.safe_dump(config, f)
@@ -85,16 +86,11 @@ class Configuration:
             return config
 
         user_config = self._read_yaml(self.user_config_path)
-
-        out_config = {}
-        all_keys = set(config.keys()).union(user_config.keys())
-        for key in all_keys:
-            k_config = {**config.get(key, {}), **user_config.get(key, {})}
-            out_config[key] = k_config
+        out_config = deep_dict_merge(config, user_config)
 
         return out_config
 
-    def save_user_config(self):
+    def save_user_config(self, extra_config: Optional[Dict] = None) -> None:
         assert self.default_config
         config = self._read_user_config(self.default_config)
 
@@ -104,7 +100,9 @@ class Configuration:
             "speed": str(self.speed) or self.default_config["cracker"]["speed"],
             "voice": self.voice or self.default_config["cracker"].get("voice", ""),
         }
-        self._write_yaml(config, self.user_config_path)
+        if extra_config is not None:
+            config = deep_dict_merge(config, extra_config)
+        self._write_yaml(config)
 
     def apply_config(self, configuration: Dict) -> Dict[str, Any]:
         """Applies parsed config to Cracker and UI components.
@@ -128,7 +126,7 @@ class Configuration:
         speaker_config = self.load_speaker_config(self.speaker, self.language)
         _config.update(speaker_config)
 
-        # 
+        #
         for speaker, s_config in configuration["speakers"].items():
             self._logger.debug(speaker)
             _config[speaker.lower()] = {
@@ -137,8 +135,7 @@ class Configuration:
             }
 
         # Check for different than default AWS profile_name
-        if self.speaker == "polly" and "profile_name" in config_speakers["polly"]:
-            self.default_values["profile_name"] = config_speakers["polly"]["profile_name"]
+        _config["polly"]["profile_name"] = config_speakers.get("polly", {}).get("profile_name", "default")
 
         if self.voice not in self.lang_voices:
             _config["voice"] = self.voice = self.lang_voices[0]
@@ -150,7 +147,7 @@ class Configuration:
 
     def load_speaker_config(self, speaker, language=None):
         """Loads speaker's default and available configuration.
-        
+
         Args:
             speaker: Name of the speaker.
             language: Language to be used. If None then the default language is used.
@@ -179,4 +176,3 @@ class Configuration:
             raise FileNotFoundError(f"Could not find config file {self.parser_config_path}")
         regex_config = json.loads(file_content.decode("utf-8"))["parser_rules"]
         return regex_config
-

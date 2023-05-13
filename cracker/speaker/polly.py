@@ -5,6 +5,7 @@ import boto3
 from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
+from cracker.config import Configuration
 from cracker.mp3_helper import create_filename, save_mp3
 from cracker.speaker import POLLY_LANGUAGES
 from cracker.ssml import SSML
@@ -24,11 +25,15 @@ class Polly(AbstractSpeaker):
 
     LANGUAGES = POLLY_LANGUAGES
 
-    def __init__(self, player, profile_name="default"):
+    def __init__(self, player):
         self._cached_ssml = SSML()
         self._cached_filepath = ""
         self._cached_voice = ""
-        self._connect_aws(profile_name)
+
+        self.config = Configuration()
+        aws_profile = self.config.read_config()["polly"]["profile_name"]
+        self._logger.debug("Using AWS profile: %s", aws_profile)
+        self._connect_aws(aws_profile)
         self.player = player
 
     def __del__(self):
@@ -43,8 +48,7 @@ class Polly(AbstractSpeaker):
             self.client = session.client("polly")
         except Exception as e:
             self._logger.exception(
-                "Unable to connect to AWS with the profile '%s'. "
-                "Please verify that configuration file exists.",
+                "Unable to connect to AWS with the profile '%s'. " "Please verify that configuration file exists.",
                 profile_name,
             )
             raise e

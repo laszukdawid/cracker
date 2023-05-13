@@ -43,9 +43,7 @@ def test_read_user_config_dir_exists_file_not(mock_isdir, mock_isfile):
 @patch("cracker.config.configuration.os.path.isdir", return_value=True)
 def test_read_user_config_dir_file_exist(mock_isdir, mock_isfile):
     config = Configuration()
-    test_config = {
-        "cracker": {"speaker": "polly", "language": "Polish", "voice": "Maria"}
-    }
+    test_config = {"cracker": {"speaker": "polly", "language": "Polish", "voice": "Maria"}}
     config._read_yaml = MagicMock(return_value=test_config)
 
     out = config._read_user_config(
@@ -98,6 +96,5 @@ def test_save_user_config():
                 "speed": "2",
                 "voice": "Joanna",
             }
-        },
-        config.user_config_path,
+        }
     )
