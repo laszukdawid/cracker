@@ -51,9 +51,7 @@ class Cracker(object):
         _name = speaker_name.lower()
         if _name == Polly.__name__.lower():
             self._logger.info("Using AWS Polly")
-            profile_name = config.get("polly", {}).get("profile_name", "default")
-            self._logger.debug("Using AWS profile: %s", profile_name)
-            return Polly(player, profile_name)
+            return Polly(player)
         elif _name == Google.__name__.lower():
             self._logger.info("Using Google TTS")
             credentials_file = config.get("google", {}).get("credentials_file")
@@ -62,9 +60,7 @@ class Cracker(object):
         elif _name == Espeak.__name__.lower():
             self._logger.info("Using ESpeak")
             return Espeak(player)
-        raise ValueError(
-            f"No speaker was selected. Provided speaker name '{speaker_name}'"
-        )
+        raise ValueError(f"No speaker was selected. Provided speaker name '{speaker_name}'")
 
     def run(self):
         self.gui.init()
@@ -127,9 +123,7 @@ class Cracker(object):
         self.speaker.stop_text()
 
     def _prepare_config(self):
-        config = dict(
-            rate=self.gui.rate, volume=self.gui.volume, voice=self.gui.config.voice
-        )
+        config = dict(rate=self.gui.rate, volume=self.gui.volume, voice=self.gui.config.voice)
         return config
 
     def change_speaker(self, speaker_name):
@@ -143,9 +137,7 @@ class Cracker(object):
     def set_action(self):
         self.gui.stop_action.triggered.connect(self.stop_text)
         self.gui.read_action.triggered.connect(self.read_text_area)
-        self.gui.clipboard_read_action.triggered.connect(
-            self.toggle_read_text_clipboard
-        )
+        self.gui.clipboard_read_action.triggered.connect(self.toggle_read_text_clipboard)
         self.gui.toggle_action.triggered.connect(self.toggle_read)
         self.gui.reduce_action.triggered.connect(self.reduce_text)
         self.gui.wiki_action.triggered.connect(self.wiki_text)
