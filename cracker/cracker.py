@@ -29,7 +29,7 @@ class Cracker(object):
 
         self.player = QMediaPlayer()
         self.speaker: AbstractSpeaker = self.get_speaker(self.config.speaker, self.player)
-        self.textParser = TextParser(config_path=self.config.parser_config_path)
+        self.text_parser = TextParser()
 
         self.gui = MainWindow(self.config, speakers=self.SPEAKER)
         self.gui.speaker = self.speaker
@@ -69,12 +69,12 @@ class Cracker(object):
 
     def reduce_text(self):
         text = self.gui.textEdit.toPlainText()
-        new_text = self.textParser.reduce_text(text)
+        new_text = self.text_parser.reduce_text(text)
         self.gui.textEdit.setText(new_text)
 
     def reduce_cite(self):
         text = self.gui.textEdit.toPlainText()
-        new_text = self.textParser.reduce_cite(text)
+        new_text = self.text_parser.reduce_cite(text)
         self.gui.textEdit.setText(new_text)
 
     def wiki_text(self):
@@ -82,7 +82,7 @@ class Cracker(object):
         Example of this is removing `citation needed` and other references.
         """
         text = self.gui.textEdit.toPlainText()
-        text = self.textParser.wiki_text(text)
+        text = self.text_parser.wiki_text(text)
         self.gui.textEdit.setText(text)
 
     def read_text_area(self):
@@ -90,8 +90,8 @@ class Cracker(object):
         self.stop_text()
         text = self.gui.textEdit.toPlainText()  # TODO: toHtml() gives more control
 
-        self.textParser.parser_rules = self.config.regex_config
-        text = self.textParser.reduce_text(text)
+        self.text_parser.parser_rules = self.config.regex_config
+        text = self.text_parser.reduce_text(text)
         self._read(text)
 
     def toggle_read_text_clipboard(self):
@@ -104,8 +104,8 @@ class Cracker(object):
             self.stop_text()
             text = self.app.clipboard().text()
 
-            self.textParser.parser_rules = self.config.regex_config
-            text = self.textParser.reduce_text(text)
+            self.text_parser.parser_rules = self.config.regex_config
+            text = self.text_parser.reduce_text(text)
             self._read(text)
 
     def _read(self, text):

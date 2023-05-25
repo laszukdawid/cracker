@@ -14,15 +14,20 @@ def test_read_config_defaul():
     assert cracker_config["language"] == "English"
 
 
+@patch("cracker.config.configuration.os.mkdir")
+@patch("cracker.config.configuration.os.path.isfile", return_value=False)
 @patch("cracker.config.configuration.os.path.isdir", return_value=False)
-def test_read_config(mock_isdir):
+def test_read_config(mock_isdir, mock_isfile, mock_mkdir):
     config = Configuration()
     config.read_config()
     assert config.speaker == "polly"
     assert config.speed == 4
     assert config.language == "English"
 
-    mock_isdir.assert_called_once_with(config.USER_CONFIG_DIR_PATH)
+    mock_mkdir.assert_called_once_with(config.USER_CONFIG_DIR_PATH)
+    mock_isdir.assert_called_with(config.USER_CONFIG_DIR_PATH)
+    mock_isfile.assert_called_once_with(config.user_parser_path)
+    assert mock_isdir.call_count == 2
 
 
 @patch("cracker.config.configuration.os.path.isfile", return_value=False)

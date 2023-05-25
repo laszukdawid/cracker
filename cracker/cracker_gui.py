@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         self.set_action()
         self.set_widgets()
         self.init_values()
-        self.config_window.init(regex_file_path=self.config.parser_config_path)
+        self.config_window.init()
 
     def set_action(self):
         assert self.player, "Cannot set actions on non-defined Player"
