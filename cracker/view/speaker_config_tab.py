@@ -13,7 +13,6 @@ class SpeakerConfig(QWidget):
         self.config = Configuration()
 
         user_config = self.config.read_config()
-        print(user_config)
         self.aws_profile = user_config.get("polly", {}).get("profile_name", "default")
         self.aws_region = user_config.get("polly", {}).get("region_name", "")
 

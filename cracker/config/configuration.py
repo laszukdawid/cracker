@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 import yaml
 
 from cracker.speaker import LANGUAGES
-from cracker.utils import get_logger, deep_dict_merge
+from cracker.utils import deep_dict_merge, get_logger
 
 
 class Configuration:
@@ -72,6 +72,10 @@ class Configuration:
         return os.path.join(self.USER_CONFIG_DIR_PATH, "settings.yaml")
 
     @property
+    def user_parser_path(self):
+        return os.path.join(self.USER_CONFIG_DIR_PATH, "parser.json")
+
+    @property
     def default_config(self) -> Dict:
         if self._default_config is None:
             return {}
@@ -102,6 +106,8 @@ class Configuration:
         }
         if extra_config is not None:
             config = deep_dict_merge(config, extra_config)
+
+        self.save_regex_config(self.user_parser_path)
         self._write_yaml(config)
 
     def apply_config(self, configuration: Dict) -> Dict[str, Any]:
@@ -116,7 +122,6 @@ class Configuration:
 
         # Current setting
         _config = {}
-        _config["parser_config_path"] = self.parser_config_path = config["parser_config_path"]
         _config["speaker"] = self.speaker = config["speaker"]
         _config["language"] = self.language = config["language"]
         _config["speed"] = self.speed = int(config["speed"])
@@ -140,8 +145,8 @@ class Configuration:
         if self.voice not in self.lang_voices:
             _config["voice"] = self.voice = self.lang_voices[0]
 
-        if self.parser_config_path is not None:
-            self.regex_config = self.load_regex_config()
+        self.regex_config = self.load_regex_config()
+        print(f"Regex: {self.regex_config}")
 
         return _config
 
@@ -171,8 +176,23 @@ class Configuration:
     def load_regex_config(self):
         """From provided path to a config it extracts configuration for the TextParser"""
         regex_config = None
-        file_content = pkgutil.get_data("cracker", self.parser_config_path)
-        if file_content is None:
-            raise FileNotFoundError(f"Could not find config file {self.parser_config_path}")
-        regex_config = json.loads(file_content.decode("utf-8"))["parser_rules"]
-        return regex_config
+
+        if not os.path.isdir(self.USER_CONFIG_DIR_PATH):
+            self._logger.debug("Creating user dir in '%s'", self.USER_CONFIG_DIR_PATH)
+            os.mkdir(self.USER_CONFIG_DIR_PATH)
+
+        if not os.path.isfile(self.user_parser_path):
+            file_content = pkgutil.get_data("cracker", "config/parser.json")
+            file_content = file_content.decode("utf-8")
+        else:
+            with open(self.user_parser_path) as f:
+                file_content = f.read()
+        regex_config = json.loads(file_content)["parser_rules"]
+        return {v["name"]: v for v in regex_config}
+
+    def save_regex_config(self, parser_config_path: str) -> None:
+        """Writes configuration to file system."""
+        parser_rules = {"parser_rules": self.regex_config}
+        print(parser_rules)
+        with open(parser_config_path, "w") as f:
+            json.dump(parser_rules, f, indent=4)

@@ -2,7 +2,6 @@ cracker:
   language: English
   speaker: polly
   speed: 4
-  parser_config_path: config/parser.json
 
 speakers:
   polly:

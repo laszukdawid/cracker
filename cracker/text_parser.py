@@ -1,10 +1,9 @@
 import html
-import json
 import logging
-import pkgutil
 import re
 from collections import OrderedDict
-from typing import Optional
+
+from cracker.config import Configuration
 
 
 class TextParser:
@@ -13,14 +12,13 @@ class TextParser:
     citation_author_year = re.compile(r"[\(\[]\w+, \d{4}(;\s\w+, \d{4})*[\)\]]")
     citation_numbers_comma = re.compile(r"\[\d+(,\s*\d+)*\]")
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self):
         self._config = None
         self._parser_rules = None
         self._regex_rules = OrderedDict()
 
-        # Check that this is a file
-        if self._config is None and config_path is not None:
-            self.config = self.read_config_path(config_path)
+        global_config = Configuration()
+        self.config = global_config.load_regex_config()
 
     @property
     def config(self):
@@ -41,15 +39,6 @@ class TextParser:
         self._config["parser_rules"] = parser_rules
         self.update_config()
 
-    def read_config_path(self, config_path: str):
-        """From provided path to a config it extracts configuration for the TextParser"""
-        self._logger.info("parsing read config path")
-        file_content = pkgutil.get_data("cracker", config_path)
-        if file_content is None:
-            raise FileNotFoundError(f"Could not find config file {config_path}")
-        config = json.loads(file_content.decode("utf-8"))
-        return config
-
     def update_config(self):
         """Goes through the config and extracts regex rules."""
         if self.config is None:
@@ -58,7 +47,7 @@ class TextParser:
         # Clears all regex rules
         self._regex_rules.clear()
 
-        for rule in self.config["parser_rules"]:
+        for rule in self.config.values():
             if not rule["active"]:
                 continue
             self._regex_rules[rule["key"]] = rule["value"]

@@ -1,37 +1,32 @@
 import json
 import logging
 import pkgutil
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from PyQt5.QtWidgets import QCheckBox, QGridLayout, QLabel, QLineEdit, QWidget
+
 from cracker.config import Configuration
 
 
 class ParserConfig(QWidget):
     _logger = logging.getLogger(__name__)
 
-    def __init__(self, regex_file_path=""):
+    def __init__(self):
         super().__init__()
 
         self.config = Configuration()
 
-        self.regex_file_path = regex_file_path
         self.regex_config = {}
-        # self.setWindowTitle("Configuration")
 
         self.layout = QGridLayout()
         self.setLayout(self.layout)
 
-    def init(self, regex_file_path=""):
-        self.regex_file_path = regex_file_path
-
-        self.regex_config = self.refresh_reduce_rules()
+    def init(self):
+        self.regex_config = self.config.regex_config
         self.create_options(self.regex_config)
 
-    def confirm_action(self):
+    def confirm_action(self) -> List:
         self.check_update()
-        # self.config.regex_config = self.get_regex_config()
-        # self.hide()
         return self.get_regex_config()
 
     def clearLayout(layout):
@@ -42,10 +37,6 @@ class ParserConfig(QWidget):
 
     def refresh_reduce_rules(self) -> Optional[Dict]:
         """From provided path to a config it extracts configuration for the TextParser"""
-        if len(self.regex_file_path) == 0:
-            print("Couldn't find config file. Skipping configuration.")
-            return
-
         regex_config_list = {}
         try:
             file_content = pkgutil.get_data("cracker", self.regex_file_path)
@@ -69,17 +60,23 @@ class ParserConfig(QWidget):
     def check_update(self) -> None:
         """Iterate through every option and see it they're active"""
         assert self.regex_config, "Regex config hasn't been loaded"
-        regex_config_options_layout = self.layout.itemAtPosition(0, 0).widget().layout
-        for row in range(1, regex_config_options_layout.rowCount()):
-            active_box = regex_config_options_layout.itemAtPosition(row, RegexConfigOptions.ACTIVE_POS).widget()
-            name_widget = regex_config_options_layout.itemAtPosition(row, RegexConfigOptions.NAME_POS).widget()
+        _layout = self.layout.itemAtPosition(0, 0).widget().layout
+        for row in range(1, _layout.rowCount()):
+            active_box = _layout.itemAtPosition(row, RegexConfigOptions.ACTIVE_POS).widget()
+            key_box = _layout.itemAtPosition(row, RegexConfigOptions.KEY_POS).widget()
+            value_box = _layout.itemAtPosition(row, RegexConfigOptions.VALUE_POS).widget()
+            name_widget = _layout.itemAtPosition(row, RegexConfigOptions.NAME_POS).widget()
             name = name_widget.text()
+
+            # TODO: Oopsy! Can't change name!
             if name in self.regex_config:
                 self.regex_config[name]["active"] = active_box.isChecked()
+                self.regex_config[name]["key"] = key_box.text()
+                self.regex_config[name]["value"] = value_box.text()
 
-    def get_regex_config(self):
+    def get_regex_config(self) -> List:
         assert self.regex_config, "Regex config hasn't been loaded"
-        return self.regex_config.values()
+        return list(self.regex_config.values())
 
 
 class RegexConfigOptions(QWidget):

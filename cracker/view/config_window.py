@@ -1,6 +1,6 @@
 import logging
 
-from PyQt5.QtWidgets import QGridLayout, QPushButton, QWidget, QTabWidget
+from PyQt5.QtWidgets import QGridLayout, QPushButton, QTabWidget, QWidget
 
 from cracker.config import Configuration
 from cracker.view.parser_config_tab import ParserConfig
@@ -41,9 +41,9 @@ class ConfigWindow(QWidget):
 
         self.resize(500, self.height())
 
-    def init(self, regex_file_path=""):
+    def init(self):
         self._logger.debug("Init config window")
-        self.parser_tab.init(regex_file_path)
+        self.parser_tab.init()
 
     def cancel_action(self):
         self.hide()
