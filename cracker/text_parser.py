@@ -13,21 +13,11 @@ class TextParser:
     citation_numbers_comma = re.compile(r"\[\d+(,\s*\d+)*\]")
 
     def __init__(self):
-        self._config = None
         self._parser_rules = None
         self._regex_rules = OrderedDict()
 
         global_config = Configuration()
-        self.config = global_config.load_regex_config()
-
-    @property
-    def config(self):
-        return self._config
-
-    @config.setter
-    def config(self, config):
-        self._config = config
-        self.update_config()
+        self.parser_rules = global_config.load_regex_config()
 
     @property
     def parser_rules(self):
@@ -35,19 +25,18 @@ class TextParser:
 
     @parser_rules.setter
     def parser_rules(self, parser_rules):
-        assert self._config, "Need to provide config before parser"
-        self._config["parser_rules"] = parser_rules
+        self._parser_rules = parser_rules
         self.update_config()
 
     def update_config(self):
         """Goes through the config and extracts regex rules."""
-        if self.config is None:
+        if self.parser_rules is None:
             return
 
         # Clears all regex rules
         self._regex_rules.clear()
 
-        for rule in self.config.values():
+        for rule in self.parser_rules.values():
             if not rule["active"]:
                 continue
             self._regex_rules[rule["key"]] = rule["value"]
