@@ -1,52 +1,52 @@
 {
-  "parser_rules": [
-    {
+  "parser_rules": {
+    "citation_compact_all": {
       "name": "citation_compact_all",
       "active": true,
       "key": "[\\(\\[](((and\\s)?[A-Z]\\w+(\\set\\sal\\.)?\\W?\\s)+\\d{4}([;]\\s)?)+[\\)\\]]",
       "value": ""
     },
-    {
+    "citation_author_year": {
       "name": "citation_author_year",
       "active": false,
       "key": "[\\(\\[](([A-Z]\\w+(\\set\\sal\\.)?,\\s\\d{4})([;]\\s)?){1,}[\\]\\)]",
       "value": ""
     },
-    {
+    "citation_numbers_comma": {
       "name": "citation_numbers_comma",
       "active": false,
       "key": "\\[\\d+(,\\s*\\d+)*\\]",
       "value": ""
     },
-    {
+    "extensive_new_line": {
       "name": "extensive_new_line",
       "active": true,
       "key": "\\n\\s*?(?=[a-z])",
       "value": " "
     },
-    {
+    "hypthened_new_line": {
       "name": "hypthened_new_line",
       "active": true,
       "key": "-\\n",
       "value": ""
     },
-    {
+    "just_dash": {
       "name": "just_dash",
       "active": true,
       "key": "- ",
       "value": ""
     },
-    {
+    "tabs": {
       "name": "tabs",
       "active": true,
       "key": "\\t",
       "value": " "
     },
-    {
+    "trailing_whitespace": {
       "name": "trailing_whitespace",
       "active": false,
       "key": "\\b\\s+\\.",
       "value": "."
     }
-  ]
+  }
 }

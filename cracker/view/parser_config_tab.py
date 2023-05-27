@@ -27,31 +27,13 @@ class ParserConfig(QWidget):
 
     def confirm_action(self) -> List:
         self.check_update()
-        return self.get_regex_config()
+        return self.regex_config
 
     def clearLayout(layout):
         while layout.count():
             child = layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
-
-    def refresh_reduce_rules(self) -> Optional[Dict]:
-        """From provided path to a config it extracts configuration for the TextParser"""
-        regex_config_list = {}
-        try:
-            file_content = pkgutil.get_data("cracker", self.regex_file_path)
-            if file_content is None:
-                raise FileNotFoundError(f"Could not find config file {self.regex_file_path}")
-            regex_config_list = json.loads(file_content.decode("utf-8"))
-        except Exception:
-            self._logger.exception("While reading config")
-
-        regex_config = {}
-        for regex_entry in regex_config_list["parser_rules"]:
-            name = regex_entry["name"]
-            regex_config[name] = regex_entry
-
-        return regex_config
 
     def create_options(self, options):
         regex_config_options = RegexConfigOptions(options)
@@ -73,10 +55,6 @@ class ParserConfig(QWidget):
                 self.regex_config[name]["active"] = active_box.isChecked()
                 self.regex_config[name]["key"] = key_box.text()
                 self.regex_config[name]["value"] = value_box.text()
-
-    def get_regex_config(self) -> List:
-        assert self.regex_config, "Regex config hasn't been loaded"
-        return list(self.regex_config.values())
 
 
 class RegexConfigOptions(QWidget):

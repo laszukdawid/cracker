@@ -17,6 +17,7 @@ class Configuration:
 
     language_file = "voices.json"
     DEFAULT_CONFIG_PATH = "config/default.yaml"
+    DEFAULT_PARSER_PATH = "config/parser.json"
     USER_CONFIG_DIR_PATH = os.path.expanduser("~/.config/cracker")
 
     languages = []
@@ -146,8 +147,6 @@ class Configuration:
             _config["voice"] = self.voice = self.lang_voices[0]
 
         self.regex_config = self.load_regex_config()
-        print(f"Regex: {self.regex_config}")
-
         return _config
 
     def load_speaker_config(self, speaker, language=None):
@@ -182,17 +181,16 @@ class Configuration:
             os.mkdir(self.USER_CONFIG_DIR_PATH)
 
         if not os.path.isfile(self.user_parser_path):
-            file_content = pkgutil.get_data("cracker", "config/parser.json")
+            file_content = pkgutil.get_data("cracker", self.DEFAULT_PARSER_PATH)
             file_content = file_content.decode("utf-8")
         else:
             with open(self.user_parser_path) as f:
                 file_content = f.read()
         regex_config = json.loads(file_content)["parser_rules"]
-        return {v["name"]: v for v in regex_config}
+        return regex_config
 
     def save_regex_config(self, parser_config_path: str) -> None:
         """Writes configuration to file system."""
         parser_rules = {"parser_rules": self.regex_config}
-        print(parser_rules)
         with open(parser_config_path, "w") as f:
             json.dump(parser_rules, f, indent=4)
