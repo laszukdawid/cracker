@@ -6,10 +6,10 @@ from typing import Any, Dict, Optional
 import yaml
 
 from cracker.speaker import LANGUAGES
-from cracker.utils import deep_dict_merge, get_logger
+from cracker.utils import deep_dict_merge, get_logger, Singleton
 
 
-class Configuration:
+class Configuration(Singleton):
     """Holds configuration values for the application."""
 
     singleton = None
@@ -31,11 +31,6 @@ class Configuration:
 
     regex_config = None
     raw_config: Optional[Dict] = None
-
-    def __new__(cls, *args, **kwargs):
-        if not cls.singleton:
-            cls.singleton = object.__new__(Configuration)
-        return cls.singleton
 
     def read_config(self) -> Dict[str, Any]:
         """Reads configuration from file system.

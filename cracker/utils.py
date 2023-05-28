@@ -3,13 +3,37 @@ from collections.abc import MutableMapping
 from typing import Dict
 
 
+class Singleton(object):
+    _instances = {}
+
+    def __new__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            logging.debug(f"Creating new instance of '{cls}'")
+            cls._instances[cls] = super(Singleton, cls).__new__(cls, *args, **kwargs)
+        return cls._instances[cls]
+
+
+class LoggerConfig(Singleton):
+    _level: int = logging.INFO
+
+    @property
+    def level(self) -> int:
+        return self._level
+
+    @level.setter
+    def level(self, value: int) -> None:
+        self._level = value
+
+
 def get_logger(name: str) -> logging.Logger:
     """Returns a logger with the given name."""
+    logger_config = LoggerConfig()
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logger_config.level)
+
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
+    handler.setLevel(logger_config.level)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger

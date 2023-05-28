@@ -1,4 +1,6 @@
 #!/usr/bin/python
+import argparse
+import logging
 import sys
 import threading
 
@@ -8,10 +10,12 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
 
 import cracker.themes
-from cracker.cracker import Cracker
+from cracker.utils import LoggerConfig
 
 
 def main():
+    from cracker.cracker import Cracker
+
     app = QApplication(sys.argv)
     app.setApplicationName("Cracker")
 
@@ -44,4 +48,13 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="cracker", description="GUI for text-to-speech")
+    parser.add_argument("--debug", action="store_true")
+    args = parser.parse_args()
+
+    logger_config = LoggerConfig()
+    if args.debug:
+        logging.info("Setting debug mode")
+        logger_config.level = logging.DEBUG if args.debug else logging.INFO
+
     main()
