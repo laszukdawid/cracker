@@ -131,7 +131,7 @@ class Cracker(object):
 
         Important: Each speaker has its own configuration. These values should be updated on change.
         """
-        self.speaker = self.SPEAKER[speaker_name](self.player)
+        self.speaker = self.get_speaker(speaker_name, self.player)
         self.gui.change_speaker(speaker_name)
 
     def set_action(self):
