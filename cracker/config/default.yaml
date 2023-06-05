@@ -15,3 +15,5 @@ speakers:
     voice: en-US
     credentials_file: ~/.google-tts.json
 
+  frogger:
+    voice: English

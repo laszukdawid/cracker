@@ -39,6 +39,7 @@ class MainWindow(QMainWindow):
 
         self.config = config
 
+        self.speaker = None
         self.speakers = speakers
         self.speaker: Optional[AbstractSpeaker] = None
         self.player: Optional[QMediaPlayer] = None
@@ -141,11 +142,12 @@ class MainWindow(QMainWindow):
         # Speaker - label and widget
         assert self.config.speaker, "Speaker needs to be defined"
 
+        _speakers = [k.capitalize() for k in self.speakers.keys()]
         self.speakerLabel = QLabel("Speaker:")
         self.speakerW = QComboBox(self)
-        self.speakerW.addItems(self.speakers.keys())
+        self.speakerW.addItems(_speakers)
         self.speakerW.setMinimumContentsLength(10)
-        self.speakerW.setCurrentIndex(list(self.speakers.keys()).index(self.config.speaker.capitalize()))
+        self.speakerW.setCurrentIndex(_speakers.index(self.config.speaker.capitalize()))
         self.speakerW.currentTextChanged.connect(self.change_speaker)
         menuLayout.addWidget(self.speakerLabel, 0, 0)
         menuLayout.addWidget(self.speakerW, 1, 0)
@@ -204,7 +206,8 @@ class MainWindow(QMainWindow):
     def closeEvent(self, close_event):
         """Triggers CloseEvent and handles closing gracefully"""
         self.closeAppEvent.emit()
-        del self.speaker
+        if hasattr(self, "speaker"):
+            del self.speaker
         self.close()
 
     def save_config(self):
@@ -217,7 +220,7 @@ class MainWindow(QMainWindow):
         Important: Each speaker has its own configuration.
         These values should be updated on change.
         """
-        self.speaker = self.speakers[speaker_name](self.player)
+        self.speaker = self.speakers[speaker_name.lower()](self.player)
         self.config.speaker = speaker_name
         self.config.load_speaker_config(speaker_name)
         self.init_values()

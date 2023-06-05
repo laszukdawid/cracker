@@ -8,6 +8,7 @@ from cracker.cracker_gui import MainWindow
 from cracker.keylogger import KeyBoardManager
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
+from cracker.speaker.frogger import Frogger
 from cracker.speaker.google import Google
 from cracker.speaker.polly import Polly
 from cracker.text_parser import TextParser
@@ -17,7 +18,7 @@ from cracker.utils import get_logger
 class Cracker(object):
     """Logic for running the Cracker program"""
 
-    SPEAKER = {Polly.__name__: Polly, Espeak.__name__: Espeak, Google.__name__: Google}
+    SPEAKER = {p.__name__.lower(): p for p in [Polly, Espeak, Google, Frogger]}
     _logger = get_logger(__name__)
 
     def __init__(self, app: QApplication):
@@ -49,6 +50,7 @@ class Cracker(object):
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         config = self.config.read_config()
         _name = speaker_name.lower()
+        speaker = self.SPEAKER.get(_name)
         if _name == Polly.__name__.lower():
             self._logger.info("Using AWS Polly")
             return Polly(player)
@@ -60,6 +62,11 @@ class Cracker(object):
         elif _name == Espeak.__name__.lower():
             self._logger.info("Using ESpeak")
             return Espeak(player)
+        elif _name == Frogger.__name__.lower():
+            self._logger.info("Using Frogger")
+            return Frogger(player)
+        # if speaker:
+        #     return speaker(player)
         raise ValueError(f"No speaker was selected. Provided speaker name '{speaker_name}'")
 
     def run(self):
@@ -121,6 +128,7 @@ class Cracker(object):
 
     def stop_text(self):
         self.speaker.stop_text()
+        self.player.stop()
 
     def _prepare_config(self):
         config = dict(rate=self.gui.rate, volume=self.gui.volume, voice=self.gui.config.voice)
