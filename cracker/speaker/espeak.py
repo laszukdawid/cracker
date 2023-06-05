@@ -30,7 +30,7 @@ class Espeak(AbstractSpeaker):
         self.stop_text()
 
     def read_text(self, text: str, **config) -> None:
-        self._logger.debug("Reading test: %s", text)
+        self._logger.debug("Reading text: %s", text)
         filepath = os.path.abspath(AbstractSpeaker.TMP_FILEPATH)
         command = ["espeak"]
         command += self._process_config(**config)
