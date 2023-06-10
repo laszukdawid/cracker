@@ -30,7 +30,7 @@ POLLY_LANGUAGES = {
     "Spanish": [
         "Penelope",
         "Miguel",
-    ]
+    ],
 }
 
 FROGGER_LANGUAGES = {

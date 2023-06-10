@@ -39,10 +39,11 @@ class Frogger(AbstractSpeaker):
         filepaths = []
         # TODO: This should obviously be asynchronous!
         for parted_text in split_text:
-            filename = self.ask(parted_text, speaker_id=config["voice"])
+            filename = self.ask(parted_text, voice=config["voice"])
             filepaths.append(filename)
         # self.save_cache(ssml, filepaths, voice)
 
+        print(filepaths)
         self.play_files(filepaths)
         return
 
@@ -63,10 +64,10 @@ class Frogger(AbstractSpeaker):
         else:
             self.player.pause()
 
-    def ask(self, text: str, speaker_id: str):
+    def ask(self, text: str, voice: str):
         """Connect to local server on host localhost:5002 and extract wav from stream"""
-        response = requests.get(self.URL, params={"text": text, "speaker_id": speaker_id})
+        response = requests.get(self.URL, params={"text": text, "voice": voice})
 
         if response.status_code != 200:
             raise Exception(f"Error: Unexpected response {response}")
-        return response.text
+        return response.json()["filename"]
