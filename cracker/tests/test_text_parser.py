@@ -66,6 +66,13 @@ class TestTextParser(unittest.TestCase):
         )
         self.assertEqual(len(split_text[2]), 300, "Simple maths: 6300 - 6000 = 300")
 
+    def test_split_text_per_sentence(self):
+        document = 200 * self.sentece_24chars
+        self.assertEqual(len(document), 4800, "Document should have 4800 chars length")
+
+        split_text = list(TextParser.split_text_per_sentence(document))
+        self.assertEqual(len(split_text), 200, "200 parts")
+
     def test_escape_char_quote(self):
         s = 'He said "she said"'
         out_s = TextParser.escape_tags(s)

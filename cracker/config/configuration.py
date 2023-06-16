@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 import yaml
 
 from cracker.speaker import LANGUAGES
-from cracker.utils import deep_dict_merge, get_logger, Singleton
+from cracker.utils import Singleton, deep_dict_merge, get_logger
 
 
 class Configuration(Singleton):
