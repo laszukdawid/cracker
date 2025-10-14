@@ -1,6 +1,6 @@
 import logging
 
-from PyQt5.QtWidgets import QGridLayout, QLabel, QLineEdit, QWidget
+from PyQt5.QtWidgets import QGridLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QWidget
 
 from cracker.config import Configuration
 
@@ -38,6 +38,50 @@ class SpeakerConfig(QWidget):
         self.aws_region_input.setText(self.aws_region)
         self._layout.addWidget(self.aws_region_label, 2, 0)
         self._layout.addWidget(self.aws_region_input, 2, 1)
+
+        # Test connection button
+        self.test_connection_btn = QPushButton("Test Connection")
+        self.test_connection_btn.released.connect(self.test_connection)
+        self._layout.addWidget(self.test_connection_btn, 3, 0, 1, 2)
+
+    def test_connection(self):
+        """Test AWS Polly connection with the entered profile and region"""
+        self._logger.info("Testing AWS Polly connection")
+
+        profile_name = self.aws_profile_input.text() or "default"
+        region_name = self.aws_region_input.text() or None
+
+        from cracker.speaker.polly import Polly
+
+        try:
+            # Test the connection
+            success, message = Polly.test_connection(profile_name, region_name)
+
+            # Show result dialog
+            msg_box = QMessageBox()
+            if success:
+                msg_box.setIcon(QMessageBox.Information)
+                msg_box.setWindowTitle("Connection Successful")
+                msg_box.setText("Successfully connected to AWS Polly!")
+                msg_box.setInformativeText(message)
+            else:
+                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setWindowTitle("Connection Failed")
+                msg_box.setText("Failed to connect to AWS Polly")
+                msg_box.setInformativeText(message)
+
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
+
+        except Exception as e:
+            self._logger.error("Error testing connection: %s", e)
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Critical)
+            msg_box.setWindowTitle("Connection Test Error")
+            msg_box.setText("An unexpected error occurred while testing the connection")
+            msg_box.setInformativeText(str(e))
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
 
     def confirm_action(self):
         self._logger.info("Confirming action")

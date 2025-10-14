@@ -35,6 +35,8 @@ class Cracker(object):
         self.gui = MainWindow(self.config, speakers=self.SPEAKER)
         self.gui.speaker = self.speaker
         self.gui.player = self.player
+        # Pass speaker reference to config window
+        self.gui.config_window.speaker = self.speaker
 
         self.key_manager = KeyBoardManager(self.app)
 

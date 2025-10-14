@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         self.speaker: Optional[AbstractSpeaker] = None
         self.player: Optional[QMediaPlayer] = None
 
-        self.config_window = ConfigWindow()
+        self.config_window = ConfigWindow(speaker=None)
 
     def init(self):
         self.set_action()
@@ -224,6 +224,8 @@ class MainWindow(QMainWindow):
         self.config.speaker = speaker_name
         self.config.load_speaker_config(speaker_name)
         self.init_values()
+        # Update config window with new speaker reference
+        self.config_window.speaker = self.speaker
 
     def change_volume(self, volume):
         """Volume should be on a percentage scale"""

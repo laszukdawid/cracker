@@ -1,5 +1,8 @@
+PYTHON = uv run python
+PIP = uv pip
+
 build:
-	python -m build
+	${PYTHON} -m build
 
 clean:
 	find cracker -name "*.pyc" -exec rm {} +
@@ -8,20 +11,20 @@ clean:
 	rm -r build dist  2> /dev/null || true
 
 format-code:
-	python -m isort cracker
-	python -m black cracker
+	${PYTHON} -m isort cracker
+	${PYTHON} -m black cracker
 
 upgrade:
-	pip install --upgrade pip setuptools
+	${PIP} install --upgrade pip setuptools
 
 install: upgrade
-	pip install -e .
+	${PIP} install -e .
 
 install-all: upgrade
-	pip install -e .[dev,build]
+	${PIP} install -e .[dev,build]
 
 publish:
-	python -m twine upload -r cracker dist/*
+	${PYTHON} -m twine upload -r cracker dist/*
 
 test:
-	python -m pytest -v
+	${PYTHON} -m pytest -v
