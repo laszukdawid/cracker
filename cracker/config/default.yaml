@@ -6,7 +6,7 @@ cracker:
 speakers:
   polly:
     voice: Joanna
-    profile_name: polly
+    profile_name: default
 
   espeak:
     voice: English
