@@ -1,5 +1,6 @@
+import logging
 import os
-from typing import List
+from typing import List, Optional
 
 import boto3
 from PyQt5.QtCore import QUrl
@@ -28,7 +29,7 @@ class Polly(AbstractSpeaker):
 
     def __init__(self, player):
         self._cached_ssml = SSML()
-        self._cached_filepath = ""
+        self._cached_filepaths = []
         self._cached_voice = ""
 
         self.config = Configuration()
@@ -48,17 +49,21 @@ class Polly(AbstractSpeaker):
 
     def __del__(self):
         try:
-            os.remove(self._cached_filepath)
+            for filepath in self._cached_filepaths:
+                os.remove(filepath)
         except (OSError, TypeError):
             pass
 
-    def _connect_aws(self, profile_name: str | None = None, region_name: str | None = None):
+    @staticmethod
+    def _connect_aws(
+        profile_name: Optional[str] = None, region_name: Optional[str] = None
+    ):
         """Connect to AWS and create Polly client"""
         try:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
             return session.client("polly")
         except Exception as e:
-            self._logger.exception(
+            logging.exception(
                 "Unable to connect to AWS with the profile '%s' and region '%s'. "
                 "Please verify that configuration file exists.",
                 profile_name,
@@ -73,7 +78,9 @@ class Polly(AbstractSpeaker):
         aws_profile = polly_config["profile_name"]
         aws_region = polly_config.get("region_name", None)
 
-        self._logger.debug("Reloading with AWS profile: %s, region: %s", aws_profile, aws_region)
+        self._logger.debug(
+            "Reloading with AWS profile: %s, region: %s", aws_profile, aws_region
+        )
 
         try:
             self.client = self._connect_aws(aws_profile, aws_region)
@@ -84,8 +91,10 @@ class Polly(AbstractSpeaker):
             self._connection_error = str(e)
             raise
 
-    @classmethod
-    def test_connection(cls, profile_name: str | None = None, region_name: str | None = None):
+    @staticmethod
+    def test_connection(
+        profile_name: Optional[str] = None, region_name: Optional[str] = None
+    ):
         """
         Test AWS Polly connection with given profile and region.
 
@@ -98,7 +107,7 @@ class Polly(AbstractSpeaker):
         """
         try:
             # Create session and client
-            client = Polly._connect_aws(cls, profile_name, region_name)
+            client = Polly._connect_aws(profile_name, region_name)
 
             # Try to describe voices - this is a lightweight API call to verify connectivity
             response = client.describe_voices()
@@ -152,7 +161,7 @@ class Polly(AbstractSpeaker):
             self._logger.debug("Playing cached file")
             filepaths = self._cached_filepaths
         else:
-            self._logger.debug("Re_cached_textquest from Polly")
+            self._logger.debug("Request from Polly")
             filepaths = []
             # TODO: This should obviously be asynchronous!
             try:
@@ -191,7 +200,9 @@ class Polly(AbstractSpeaker):
                 "3. Your credentials have access to AWS Polly"
             )
             self._logger.error("Attempted to use Polly without valid AWS connection")
-            self._show_error_dialog(error_msg, f"Error details: {self._connection_error}")
+            self._show_error_dialog(
+                error_msg, f"Error details: {self._connection_error}"
+            )
             raise RuntimeError("AWS Polly client not initialized")
 
         try:
@@ -199,7 +210,9 @@ class Polly(AbstractSpeaker):
             response = self.client.synthesize_speech(**speech)
             return response
         except Exception as e:
-            error_msg = "An error occurred while trying to synthesize speech with AWS Polly."
+            error_msg = (
+                "An error occurred while trying to synthesize speech with AWS Polly."
+            )
             self._logger.error("Error calling Polly synthesize_speech: %s", e)
             self._show_error_dialog(error_msg, f"Error details: {str(e)}")
             raise
