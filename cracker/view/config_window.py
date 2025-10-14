@@ -10,10 +10,11 @@ from cracker.view.speaker_config_tab import SpeakerConfig
 class ConfigWindow(QWidget):
     _logger = logging.getLogger(__name__)
 
-    def __init__(self):
+    def __init__(self, speaker=None):
         super().__init__()
 
         self.config = Configuration()
+        self.speaker = speaker
         self.setWindowTitle("Configuration")
 
         self.tabs = QTabWidget()
@@ -52,6 +53,15 @@ class ConfigWindow(QWidget):
         self._logger.debug("Confirm action")
         self.config.regex_config = self.parser_tab.confirm_action()
         self.speakers_tab.confirm_action()
+
+        # Reload Polly client if speaker is Polly and it has a reload method
+        if self.speaker and hasattr(self.speaker, "reload_client"):
+            try:
+                self._logger.debug("Reloading Polly client with updated configuration")
+                self.speaker.reload_client()
+            except Exception as e:
+                self._logger.error("Failed to reload Polly client: %s", e)
+
         self.hide()
 
     def clearLayout(layout):
