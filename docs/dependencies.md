@@ -7,7 +7,7 @@ Cracker supports Python 3.14 and uses `uv.lock` as the reproducible record of al
 - Runtime dependencies use a tested lower bound and an upper bound at the next expected breaking release.
 - Development and build tools follow the same policy; exact versions remain recorded in `uv.lock`.
 - Major upgrades are reviewed independently. Minor and patch upgrades may be grouped when the complete validation suite passes.
-- PyQt remains on version 5. A migration to PyQt6 or PySide6 is a separate compatibility project.
+- PyQt follows version 6. Qt major-version upgrades are reviewed as separate compatibility projects.
 
 ## Updating dependencies
 

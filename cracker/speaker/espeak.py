@@ -1,9 +1,6 @@
 import os
 import subprocess
 
-from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent
-
 from cracker.speaker import ESPEAK_LANGUAGES
 from cracker.utils import get_logger
 
@@ -43,17 +40,14 @@ class Espeak(AbstractSpeaker):
     def play_file(self, filepath):
         """Plays mp3 file using UNIX cmd. Returns pid to the process."""
         self._logger.debug("Playing file: %s", filepath)
-        url = QUrl.fromLocalFile(filepath)
-        media = QMediaContent(url)
-        self.player.setMedia(media)
-        self.player.play()
+        self.player.play_file(filepath)
         return
 
     def stop_text(self):
         self.player.stop()
 
     def pause_text(self):
-        if self.player.state() == self.player.PausedState:
+        if self.player.playbackState() == self.player.PlaybackState.PausedState:
             self.player.play()
         else:
             self.player.pause()

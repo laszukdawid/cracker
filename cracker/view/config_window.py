@@ -1,6 +1,6 @@
 import logging
 
-from PyQt5.QtWidgets import QGridLayout, QPushButton, QTabWidget, QWidget
+from PyQt6.QtWidgets import QGridLayout, QPushButton, QTabWidget, QWidget
 
 from cracker.config import Configuration
 from cracker.view.parser_config_tab import ParserConfig
@@ -64,9 +64,3 @@ class ConfigWindow(QWidget):
                 self._logger.error("Failed to reload Polly client: %s", e)
 
         self.hide()
-
-    def clearLayout(layout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()

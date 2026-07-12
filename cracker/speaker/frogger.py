@@ -2,8 +2,6 @@ import asyncio
 from typing import List
 
 import httpx
-from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
 from cracker.speaker import FROGGER_LANGUAGES
 from cracker.text_parser import TextParser
@@ -90,18 +88,13 @@ class Frogger(AbstractSpeaker):
         self.play_files(filepaths)
 
     def play_files(self, filepaths):
-        playlist = QMediaPlaylist(self.player)
-        for filepath in filepaths:
-            url = QUrl.fromLocalFile(filepath)
-            playlist.addMedia(QMediaContent(url))
-        self.player.setPlaylist(playlist)
-        self.player.play()
+        self.player.play_files(filepaths)
 
     def stop_text(self):
         self.player.stop()
 
     def pause_text(self):
-        if self.player.state() == self.player.PausedState:
+        if self.player.playbackState() == self.player.PlaybackState.PausedState:
             self.player.play()
         else:
             self.player.pause()

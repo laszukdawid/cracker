@@ -6,12 +6,16 @@ import sys
 import threading
 
 import darkdetect
-from PyQt5.QtCore import QFile, QIODevice, QTextStream
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
+from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
-import cracker.themes  # noqa: F401 - registers Qt stylesheet resources
+from cracker.themes import apply_theme
 from cracker.utils import LoggerConfig
+
+
+class ThemeBridge(QObject):
+    theme_changed = pyqtSignal(object)
 
 
 def parse_args(argv=None):
@@ -34,18 +38,10 @@ def main(argv=None):
     # Force the style to be the same on all OSs:
     app.setStyle("Fusion")
 
-    def toggle_palette(theme: str | None):
-        theme = theme or "light"
-        if theme.lower() == "dark":
-            file = QFile(":/dark/stylesheet.qss")
-        else:
-            file = QFile(":/light/stylesheet.qss")
-        file.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Text)
-        stream = QTextStream(file)
-        app.setStyleSheet(stream.readAll())
-
-    toggle_palette(darkdetect.theme())
-    t = threading.Thread(target=darkdetect.listener, args=(toggle_palette,))
+    apply_theme(app, darkdetect.theme())
+    theme_bridge = ThemeBridge()
+    theme_bridge.theme_changed.connect(lambda theme: apply_theme(app, theme))
+    t = threading.Thread(target=darkdetect.listener, args=(theme_bridge.theme_changed.emit,))
     t.daemon = True
     t.start()
 
@@ -58,7 +54,7 @@ def main(argv=None):
     tray.setIcon(icon)
     tray.setVisible(True)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

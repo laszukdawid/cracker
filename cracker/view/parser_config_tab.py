@@ -1,7 +1,7 @@
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
-from PyQt5.QtWidgets import QCheckBox, QGridLayout, QLabel, QLineEdit, QWidget
+from PyQt6.QtWidgets import QCheckBox, QGridLayout, QLabel, QLineEdit, QWidget
 
 from cracker.config import Configuration
 
@@ -14,24 +14,20 @@ class ParserConfig(QWidget):
 
         self.config = Configuration()
 
-        self.regex_config = {}
+        self.regex_config: dict[str, dict[str, Any]] = {}
 
         self.grid_layout = QGridLayout()
         self.setLayout(self.grid_layout)
 
     def init(self):
-        self.regex_config = self.config.regex_config
+        regex_config = self.config.regex_config
+        assert regex_config is not None
+        self.regex_config = regex_config
         self.create_options(self.regex_config)
 
-    def confirm_action(self) -> List:
+    def confirm_action(self) -> dict[str, dict[str, Any]]:
         self.check_update()
         return self.regex_config
-
-    def clearLayout(layout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
 
     def create_options(self, options):
         regex_config_options = RegexConfigOptions(options)
@@ -46,10 +42,22 @@ class ParserConfig(QWidget):
         assert isinstance(options_widget, RegexConfigOptions)
         _layout = options_widget.grid_layout
         for row in range(1, _layout.rowCount()):
-            active_box = _layout.itemAtPosition(row, RegexConfigOptions.ACTIVE_POS).widget()
-            key_box = _layout.itemAtPosition(row, RegexConfigOptions.KEY_POS).widget()
-            value_box = _layout.itemAtPosition(row, RegexConfigOptions.VALUE_POS).widget()
-            name_widget = _layout.itemAtPosition(row, RegexConfigOptions.NAME_POS).widget()
+            active_item = _layout.itemAtPosition(row, RegexConfigOptions.ACTIVE_POS)
+            key_item = _layout.itemAtPosition(row, RegexConfigOptions.KEY_POS)
+            value_item = _layout.itemAtPosition(row, RegexConfigOptions.VALUE_POS)
+            name_item = _layout.itemAtPosition(row, RegexConfigOptions.NAME_POS)
+            assert active_item is not None
+            assert key_item is not None
+            assert value_item is not None
+            assert name_item is not None
+            active_box = active_item.widget()
+            key_box = key_item.widget()
+            value_box = value_item.widget()
+            name_widget = name_item.widget()
+            assert isinstance(active_box, QCheckBox)
+            assert isinstance(key_box, QLineEdit)
+            assert isinstance(value_box, QLineEdit)
+            assert isinstance(name_widget, QLineEdit)
             name = name_widget.text()
 
             # TODO: Oopsy! Can't change name!
@@ -65,7 +73,7 @@ class RegexConfigOptions(QWidget):
     KEY_POS = 6
     VALUE_POS = 10
 
-    def __init__(self, options: Dict[str, Any]):
+    def __init__(self, options: dict[str, dict[str, Any]]):
         super().__init__()
 
         self.grid_layout = QGridLayout()
@@ -83,7 +91,7 @@ class RegexConfigOptions(QWidget):
         self.grid_layout.addWidget(QLabel("Key"), row_num, self.KEY_POS, 1, 4)
         self.grid_layout.addWidget(QLabel("Value"), row_num, self.VALUE_POS, 1, 4)
 
-    def create_config_row(self, options: Dict, row_num: int) -> None:
+    def create_config_row(self, options: dict[str, Any], row_num: int) -> None:
         active = options.get("active", False)
         name = options.get("name", "undefined")
         key = options.get("key", "")

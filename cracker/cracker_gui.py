@@ -1,8 +1,7 @@
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtMultimedia import QMediaPlayer
-from PyQt5.QtWidgets import (
-    QAction,
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QAction, QCloseEvent
+from PyQt6.QtMultimedia import QMediaPlayer
+from PyQt6.QtWidgets import (
     QComboBox,
     QGridLayout,
     QLabel,
@@ -78,7 +77,7 @@ class MainWindow(QMainWindow):
         self.toggle_action.setDisabled(True)
         self.toggle_action.setShortcut("Ctrl+Space")
         self.toggle_action.setStatusTip("Toggle read")
-        self.player.stateChanged.connect(self.toggle_label)
+        self.player.playbackStateChanged.connect(self.toggle_label)
 
         self.reduce_action = QAction("Reduce", self)
         self.reduce_action.setShortcut("Ctrl+R")
@@ -176,7 +175,9 @@ class MainWindow(QMainWindow):
         langLabel = QLabel("Language:")
         langW = QComboBox(self)
         langW.addItems(self.config.languages)
-        langW.setCurrentIndex(self.config.languages.index(self.config.language))
+        language = self.config.language
+        assert language is not None
+        langW.setCurrentIndex(self.config.languages.index(language))
         langW.currentTextChanged.connect(self.change_language)
         langW.setMinimumContentsLength(10)
         menuLayout.addWidget(langLabel, 0, 1)
@@ -186,7 +187,9 @@ class MainWindow(QMainWindow):
         voiceLabel = QLabel("Voice:")
         self.voiceW = QComboBox(self)
         self.voiceW.addItems(self.config.lang_voices)
-        self.voiceW.setCurrentIndex(self.config.lang_voices.index(self.config.voice))
+        voice = self.config.voice
+        assert voice is not None
+        self.voiceW.setCurrentIndex(self.config.lang_voices.index(voice))
         self.voiceW.setMinimumContentsLength(12)
         self.voiceW.currentTextChanged.connect(self.change_voice)
         menuLayout.addWidget(voiceLabel, 0, 2)
@@ -260,19 +263,19 @@ class MainWindow(QMainWindow):
         self.save_config()
 
     def toggle_label(self, state):
-        if QMediaPlayer.State.PlayingState == state:
+        if QMediaPlayer.PlaybackState.PlayingState == state:
             self.toggle_action.setText("Pause")
             self.toggle_action.setDisabled(False)
             self.stop_action.setDisabled(False)
             self.read_action.setDisabled(True)
             self.clipboard_read_action.setDisabled(True)
-        elif QMediaPlayer.State.StoppedState == state:
+        elif QMediaPlayer.PlaybackState.StoppedState == state:
             self.toggle_action.setText("Pause")
             self.toggle_action.setDisabled(True)
             self.stop_action.setDisabled(True)
             self.read_action.setDisabled(False)
             self.clipboard_read_action.setDisabled(False)
-        elif QMediaPlayer.State.PausedState == state:
+        elif QMediaPlayer.PlaybackState.PausedState == state:
             self.toggle_action.setText("Resume")
             self.stop_action.setDisabled(False)
             self.toggle_action.setDisabled(False)

@@ -5,7 +5,7 @@ requires = ["setuptools>=80.9,<81"]
 [project]
 dependencies = [
   "boto3>=1.43,<2",
-  "pyqt5>=5.15.11,<6",
+  "pyqt6>=6.11,<7",
   "pynput>=1.8.2,<2",
   "google-cloud-texttospeech>=2.37,<3",
   "darkdetect>=0.8,<1",
@@ -28,8 +28,15 @@ test = ["pytest>=8.4,<9"]
 [tool.setuptools.dynamic]
 version = { attr = "cracker.__version__" }
 
+[tool.setuptools]
+include-package-data = false
+
 [tool.setuptools.packages.find]
 include = ["cracker*"]
+exclude = ["cracker.tests*"]
+
+[tool.setuptools.package-data]
+cracker = ["config/*.json", "config/*.yaml", "*.jpeg", "*.png"]
 
 [tool.ruff]
 line-length = 120
