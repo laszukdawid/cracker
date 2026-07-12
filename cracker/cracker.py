@@ -52,7 +52,6 @@ class Cracker(object):
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         config = self.config.read_config()
         _name = speaker_name.lower()
-        speaker = self.SPEAKER.get(_name)
         if _name == Polly.__name__.lower():
             self._logger.info("Using AWS Polly")
             return Polly(player)

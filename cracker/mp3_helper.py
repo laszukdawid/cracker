@@ -1,14 +1,13 @@
 import os
-from typing import Optional
 
 CACHE_PATH = os.path.expanduser(r"~/.cache/cracker")
 try:
     os.makedirs(CACHE_PATH)
-except:
+except OSError:
     pass
 
 
-def create_filename(base_filename: str, idx: Optional[int] = None) -> str:
+def create_filename(base_filename: str, idx: int | None = None) -> str:
     "Helper function to index file without losing extension"
     if idx is not None:
         filename = "-{}.".format(idx).join(base_filename.rsplit(".", 1))

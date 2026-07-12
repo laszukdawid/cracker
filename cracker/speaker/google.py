@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 from google.cloud import texttospeech
 from PyQt5.QtCore import QUrl
@@ -7,7 +6,6 @@ from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
 from cracker.mp3_helper import create_filename, save_mp3
 from cracker.speaker import GOOGLE_LANGUAGES
-from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
 
@@ -23,7 +21,7 @@ class Google(AbstractSpeaker):
 
     LANGUAGES = GOOGLE_LANGUAGES
 
-    def __init__(self, player, credentials_file: Optional[str] = None):
+    def __init__(self, player, credentials_file: str | None = None):
         self._connect_google(credentials_file)
         self.player = player
 

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, Union
+from typing import Dict, Type, Union
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtMultimedia import QMediaPlayer
@@ -41,8 +41,8 @@ class MainWindow(QMainWindow):
 
         self.speaker = None
         self.speakers = speakers
-        self.speaker: Optional[AbstractSpeaker] = None
-        self.player: Optional[QMediaPlayer] = None
+        self.speaker: AbstractSpeaker | None = None
+        self.player: QMediaPlayer | None = None
 
         self.config_window = ConfigWindow(speaker=None)
 
