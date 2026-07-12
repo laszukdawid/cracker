@@ -23,7 +23,7 @@ cracker = "cracker.main:main"
 [project.optional-dependencies]
 dev = ["ruff>=0.15.21,<1", "ty>=0.0.58,<0.1"]
 build = ["build>=1.3,<2", "twine>=6.2,<7"]
-test = ["pytest>=8.4,<9"]
+test = ["pytest>=8.4,<10"]
 
 [tool.setuptools.dynamic]
 version = { attr = "cracker.__version__" }
