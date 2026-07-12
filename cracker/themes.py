@@ -7120,7 +7120,9 @@ qt_resource_struct_v2 = b"\
 \x00\x00\x01\x86\xd9\x4f\x5f\x44\
 "
 
-qt_version = [int(v) for v in QtCore.qVersion().split(".")]
+qt_version_string = QtCore.qVersion()
+assert qt_version_string is not None
+qt_version = [int(v) for v in qt_version_string.split(".")]
 if qt_version < [5, 8, 0]:
     rcc_version = 1
     qt_resource_struct = qt_resource_struct_v1

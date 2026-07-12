@@ -16,8 +16,8 @@ class ParserConfig(QWidget):
 
         self.regex_config = {}
 
-        self.layout = QGridLayout()
-        self.setLayout(self.layout)
+        self.grid_layout = QGridLayout()
+        self.setLayout(self.grid_layout)
 
     def init(self):
         self.regex_config = self.config.regex_config
@@ -35,12 +35,16 @@ class ParserConfig(QWidget):
 
     def create_options(self, options):
         regex_config_options = RegexConfigOptions(options)
-        self.layout.addWidget(regex_config_options, 0, 0, 1, 5)
+        self.grid_layout.addWidget(regex_config_options, 0, 0, 1, 5)
 
     def check_update(self) -> None:
         """Iterate through every option and see it they're active"""
         assert self.regex_config, "Regex config hasn't been loaded"
-        _layout = self.layout.itemAtPosition(0, 0).widget().layout
+        options_item = self.grid_layout.itemAtPosition(0, 0)
+        assert options_item is not None
+        options_widget = options_item.widget()
+        assert isinstance(options_widget, RegexConfigOptions)
+        _layout = options_widget.grid_layout
         for row in range(1, _layout.rowCount()):
             active_box = _layout.itemAtPosition(row, RegexConfigOptions.ACTIVE_POS).widget()
             key_box = _layout.itemAtPosition(row, RegexConfigOptions.KEY_POS).widget()
@@ -64,8 +68,8 @@ class RegexConfigOptions(QWidget):
     def __init__(self, options: Dict[str, Any]):
         super().__init__()
 
-        self.layout = QGridLayout()
-        self.setLayout(self.layout)
+        self.grid_layout = QGridLayout()
+        self.setLayout(self.grid_layout)
 
         # Always add header
         self.create_header()
@@ -74,10 +78,10 @@ class RegexConfigOptions(QWidget):
             self.create_config_row(option, num + 1)
 
     def create_header(self, row_num: int = 0) -> None:
-        self.layout.addWidget(QLabel("Active"), row_num, self.ACTIVE_POS)
-        self.layout.addWidget(QLabel("Name"), row_num, self.NAME_POS, 1, 4)
-        self.layout.addWidget(QLabel("Key"), row_num, self.KEY_POS, 1, 4)
-        self.layout.addWidget(QLabel("Value"), row_num, self.VALUE_POS, 1, 4)
+        self.grid_layout.addWidget(QLabel("Active"), row_num, self.ACTIVE_POS)
+        self.grid_layout.addWidget(QLabel("Name"), row_num, self.NAME_POS, 1, 4)
+        self.grid_layout.addWidget(QLabel("Key"), row_num, self.KEY_POS, 1, 4)
+        self.grid_layout.addWidget(QLabel("Value"), row_num, self.VALUE_POS, 1, 4)
 
     def create_config_row(self, options: Dict, row_num: int) -> None:
         active = options.get("active", False)
@@ -87,13 +91,13 @@ class RegexConfigOptions(QWidget):
 
         active_widget = QCheckBox()
         active_widget.setChecked(active)
-        self.layout.addWidget(active_widget, row_num, self.ACTIVE_POS)
+        self.grid_layout.addWidget(active_widget, row_num, self.ACTIVE_POS)
 
         name_widget = QLineEdit(name)
-        self.layout.addWidget(name_widget, row_num, self.NAME_POS, 1, 4)
+        self.grid_layout.addWidget(name_widget, row_num, self.NAME_POS, 1, 4)
 
         key_widget = QLineEdit(key)
-        self.layout.addWidget(key_widget, row_num, self.KEY_POS, 1, 4)
+        self.grid_layout.addWidget(key_widget, row_num, self.KEY_POS, 1, 4)
 
         value_widget = QLineEdit(value)
-        self.layout.addWidget(value_widget, row_num, self.VALUE_POS, 1, 4)
+        self.grid_layout.addWidget(value_widget, row_num, self.VALUE_POS, 1, 4)

@@ -6,7 +6,7 @@ import sys
 import threading
 
 import darkdetect
-from PyQt5.QtCore import QFile, QTextStream
+from PyQt5.QtCore import QFile, QIODevice, QTextStream
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
 
@@ -40,7 +40,7 @@ def main(argv=None):
             file = QFile(":/dark/stylesheet.qss")
         else:
             file = QFile(":/light/stylesheet.qss")
-        file.open(QFile.ReadOnly | QFile.Text)
+        file.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Text)
         stream = QTextStream(file)
         app.setStyleSheet(stream.readAll())
 
