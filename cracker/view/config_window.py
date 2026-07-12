@@ -52,7 +52,8 @@ class ConfigWindow(QWidget):
     def confirm_action(self):
         self._logger.debug("Confirm action")
         self.config.regex_config = self.parser_tab.confirm_action()
-        self.speakers_tab.confirm_action()
+        if not self.speakers_tab.confirm_action():
+            return
 
         # Reload Polly client if speaker is Polly and it has a reload method
         if self.speaker and hasattr(self.speaker, "reload_client"):

@@ -90,6 +90,7 @@ def test_save_user_config():
         }
     }
     config._write_yaml = MagicMock()
+    config.save_regex_config = MagicMock()
 
     config.save_user_config()
 

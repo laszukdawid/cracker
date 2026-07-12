@@ -74,6 +74,11 @@ If you're on Ubuntu you'll most likely need additional `gstreamer` packages. Oth
 
 Since this is a GUI on top of [AWS Polly](https://aws.amazon.com/polly/) it is assumed that one has credentials stored in default directory. This is `~/.aws/credentials` on unix based systems.
 
+AWS IAM Identity Center (SSO) profiles can be configured from **Config → Speakers**. Enter the profile, SSO
+session, start URL, SSO region, account ID, role, and Polly region, then choose **Save and sign in with SSO**.
+Cracker writes the standard AWS shared configuration and starts `aws sso login`; this sign-in action requires
+[AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+
 Currently reading out is performed by downloading mp3 format of the request and then using `mpg123` to play it. This isn't optimal and should be changed, but, for now, it works.
 
 Suggested execution command
