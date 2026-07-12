@@ -27,6 +27,9 @@ install:
 install-all:
 	${UV} sync --all-extras
 
+run:
+	${RUN} cracker
+
 upgrade:
 	${UV} lock --upgrade
 

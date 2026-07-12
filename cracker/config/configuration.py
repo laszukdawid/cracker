@@ -137,6 +137,7 @@ class Configuration(Singleton):
 
         # Check for different than default AWS profile_name
         _config["polly"]["profile_name"] = config_speakers.get("polly", {}).get("profile_name", "default")
+        _config["polly"]["region_name"] = config_speakers.get("polly", {}).get("region_name", "")
 
         if self.voice not in self.lang_voices:
             _config["voice"] = self.voice = self.lang_voices[0]
