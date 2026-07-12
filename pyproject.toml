@@ -5,10 +5,10 @@ requires = ["setuptools>=80.9,<81"]
 [project]
 dependencies = [
   "boto3>=1.43,<2",
-  "pyqt5==5.15.*",
-  "pynput==1.7.*",
+  "pyqt5>=5.15.11,<6",
+  "pynput>=1.8.2,<2",
   "google-cloud-texttospeech>=2.37,<3",
-  "darkdetect==0.8.*",
+  "darkdetect>=0.8,<1",
   "pyyaml",
 ]
 name = "cracker"
