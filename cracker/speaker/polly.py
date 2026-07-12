@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List, Optional
+from typing import List
 
 import boto3
 from PyQt5.QtCore import QUrl
@@ -51,13 +51,11 @@ class Polly(AbstractSpeaker):
         try:
             for filepath in self._cached_filepaths:
                 os.remove(filepath)
-        except (OSError, TypeError):
+        except OSError, TypeError:
             pass
 
     @staticmethod
-    def _connect_aws(
-        profile_name: Optional[str] = None, region_name: Optional[str] = None
-    ):
+    def _connect_aws(profile_name: str | None = None, region_name: str | None = None):
         """Connect to AWS and create Polly client"""
         try:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
@@ -78,9 +76,7 @@ class Polly(AbstractSpeaker):
         aws_profile = polly_config["profile_name"]
         aws_region = polly_config.get("region_name", None)
 
-        self._logger.debug(
-            "Reloading with AWS profile: %s, region: %s", aws_profile, aws_region
-        )
+        self._logger.debug("Reloading with AWS profile: %s, region: %s", aws_profile, aws_region)
 
         try:
             self.client = self._connect_aws(aws_profile, aws_region)
@@ -92,9 +88,7 @@ class Polly(AbstractSpeaker):
             raise
 
     @staticmethod
-    def test_connection(
-        profile_name: Optional[str] = None, region_name: Optional[str] = None
-    ):
+    def test_connection(profile_name: str | None = None, region_name: str | None = None):
         """
         Test AWS Polly connection with given profile and region.
 
@@ -119,9 +113,7 @@ class Polly(AbstractSpeaker):
             actual_region = client.meta.region_name
 
             success_message = (
-                f"Profile: {profile_name or 'default'}\n"
-                f"Region: {actual_region}\n"
-                f"Available voices: {voice_count}"
+                f"Profile: {profile_name or 'default'}\nRegion: {actual_region}\nAvailable voices: {voice_count}"
             )
 
             return True, success_message
@@ -200,9 +192,7 @@ class Polly(AbstractSpeaker):
                 "3. Your credentials have access to AWS Polly"
             )
             self._logger.error("Attempted to use Polly without valid AWS connection")
-            self._show_error_dialog(
-                error_msg, f"Error details: {self._connection_error}"
-            )
+            self._show_error_dialog(error_msg, f"Error details: {self._connection_error}")
             raise RuntimeError("AWS Polly client not initialized")
 
         try:
@@ -210,9 +200,7 @@ class Polly(AbstractSpeaker):
             response = self.client.synthesize_speech(**speech)
             return response
         except Exception as e:
-            error_msg = (
-                "An error occurred while trying to synthesize speech with AWS Polly."
-            )
+            error_msg = "An error occurred while trying to synthesize speech with AWS Polly."
             self._logger.error("Error calling Polly synthesize_speech: %s", e)
             self._show_error_dialog(error_msg, f"Error details: {str(e)}")
             raise

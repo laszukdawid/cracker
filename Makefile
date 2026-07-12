@@ -1,8 +1,8 @@
-PYTHON = uv run python
-PIP = uv pip
+UV = uv
+RUN = ${UV} run
 
 build:
-	${PYTHON} -m build
+	${UV} build
 
 clean:
 	find cracker -name "*.pyc" -exec rm {} +
@@ -11,20 +11,29 @@ clean:
 	rm -r build dist  2> /dev/null || true
 
 format-code:
-	${PYTHON} -m isort cracker
-	${PYTHON} -m black cracker
+	${RUN} --extra dev ruff check --fix cracker
+	${RUN} --extra dev ruff format cracker
+
+format-check:
+	${RUN} --extra dev ruff check cracker
+	${RUN} --extra dev ruff format --check cracker
+
+typecheck:
+	${RUN} --extra dev ty check
+
+install:
+	${UV} sync
+
+install-all:
+	${UV} sync --all-extras
 
 upgrade:
-	${PIP} install --upgrade pip setuptools
-
-install: upgrade
-	${PIP} install -e .
-
-install-all: upgrade
-	${PIP} install -e .[dev,build]
+	${UV} lock --upgrade
 
 publish:
-	${PYTHON} -m twine upload -r cracker dist/*
+	${RUN} --extra build twine upload -r cracker dist/*
 
 test:
-	${PYTHON} -m pytest -v
+	${RUN} --extra test pytest -v
+
+check: format-check typecheck test build

@@ -1,7 +1,7 @@
 import json
 import os
 import pkgutil
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
 import yaml
 
@@ -20,17 +20,17 @@ class Configuration(Singleton):
     DEFAULT_PARSER_PATH = "config/parser.json"
     USER_CONFIG_DIR_PATH = os.path.expanduser("~/.config/cracker")
 
-    languages = []
+    languages: List[str] = []
 
-    speaker = None
-    language = None
-    voice = None
-    voices = []
+    speaker: str | None = None
+    language: str | None = None
+    voice: str | None = None
+    voices: Dict[str, List[str]] = {}
     speed = 0
     credentials_file = {}
 
     regex_config = None
-    raw_config: Optional[Dict] = None
+    raw_config: Dict | None = None
 
     def read_config(self) -> Dict[str, Any]:
         """Reads configuration from file system.
@@ -90,7 +90,7 @@ class Configuration(Singleton):
 
         return out_config
 
-    def save_user_config(self, extra_config: Optional[Dict] = None) -> None:
+    def save_user_config(self, extra_config: Dict | None = None) -> None:
         assert self.default_config
         config = self._read_user_config(self.default_config)
 
@@ -160,6 +160,8 @@ class Configuration(Singleton):
         config["languages"] = self.languages = list(self.voices.keys())
         if language is None:
             language = self.language
+        if language is None:
+            raise ValueError("Language needs to be configured before loading speaker voices")
         config["lang_voices"] = self.lang_voices = self.voices[language]
 
         if self.voice not in self.lang_voices:
@@ -177,6 +179,8 @@ class Configuration(Singleton):
 
         if not os.path.isfile(self.user_parser_path):
             file_content = pkgutil.get_data("cracker", self.DEFAULT_PARSER_PATH)
+            if file_content is None:
+                raise FileNotFoundError(f"Could not find parser config {self.DEFAULT_PARSER_PATH}")
             file_content = file_content.decode("utf-8")
         else:
             with open(self.user_parser_path) as f:

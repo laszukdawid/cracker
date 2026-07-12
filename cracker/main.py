@@ -6,11 +6,11 @@ import sys
 import threading
 
 import darkdetect
-from PyQt5.QtCore import QFile, Qt, QTextStream
+from PyQt5.QtCore import QFile, QTextStream
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
 
-import cracker.themes
+import cracker.themes  # noqa: F401 - registers Qt stylesheet resources
 from cracker.utils import LoggerConfig
 
 
