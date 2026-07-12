@@ -4,10 +4,10 @@ requires = ["setuptools>=80.9,<81"]
 
 [project]
 dependencies = [
-  "boto3==1.26.*",
+  "boto3>=1.43,<2",
   "pyqt5==5.15.*",
   "pynput==1.7.*",
-  "google-cloud-texttospeech==2.5.*",
+  "google-cloud-texttospeech>=2.37,<3",
   "darkdetect==0.8.*",
   "pyyaml",
 ]
