@@ -148,7 +148,6 @@ class MainWindow(QMainWindow):
         self.speakerW.addItems(_speakers)
         self.speakerW.setMinimumContentsLength(10)
         self.speakerW.setCurrentIndex(_speakers.index(self.config.speaker.capitalize()))
-        self.speakerW.currentTextChanged.connect(self.change_speaker)
         menuLayout.addWidget(self.speakerLabel, 0, 0)
         menuLayout.addWidget(self.speakerW, 1, 0)
 
@@ -214,13 +213,13 @@ class MainWindow(QMainWindow):
         self._logger.debug("Saving user config")
         self.config.save_user_config()
 
-    def change_speaker(self, speaker_name: str):
+    def change_speaker(self, speaker_name: str, speaker: AbstractSpeaker):
         """Action on changing speaker.
 
         Important: Each speaker has its own configuration.
         These values should be updated on change.
         """
-        self.speaker = self.speakers[speaker_name.lower()](self.player)
+        self.speaker = speaker
         self.config.speaker = speaker_name
         self.config.load_speaker_config(speaker_name)
         self.init_values()
