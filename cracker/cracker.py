@@ -1,8 +1,9 @@
 from threading import Thread
 
-from PyQt5.QtMultimedia import QMediaPlayer
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtMultimedia import QMediaPlayer
+from PyQt6.QtWidgets import QApplication
 
+from cracker.audio_player import AudioPlayer
 from cracker.config import Configuration
 from cracker.cracker_gui import MainWindow
 from cracker.keylogger import KeyBoardManager
@@ -30,7 +31,7 @@ class Cracker(object):
         self.config = Configuration()
         _ = self.config.read_config()
 
-        self.player = QMediaPlayer()
+        self.player = AudioPlayer()
         self.speaker: AbstractSpeaker = self.get_speaker(self.config.speaker, self.player)
         self.text_parser = TextParser()
 
@@ -107,7 +108,7 @@ class Cracker(object):
     def toggle_read_text_clipboard(self):
         """Reads out text from the clipboard with selected speaker."""
         self._logger.debug("Reading text from clipboard")
-        if self.player.state() == QMediaPlayer.State.PlayingState:
+        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
             self.stop_text()
             self.player.stop()
         else:
@@ -126,7 +127,7 @@ class Cracker(object):
         self._last_pid = self.speaker.read_text(text, **speaker_config)
 
     def toggle_read(self):
-        if self.player.state() == QMediaPlayer.State.PausedState:
+        if self.player.playbackState() == QMediaPlayer.PlaybackState.PausedState:
             self.player.play()
         else:
             self.player.pause()

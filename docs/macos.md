@@ -1,20 +1,9 @@
-# MacOs
+# macOS development
 
-## Installing PyQt5 on M1 (arm)
-
-### Installing through brew
+PyQt6 publishes binary wheels for Intel and Apple Silicon macOS. No Homebrew Qt installation is required.
 
 ```shell
-> brew install pyqt@5
+uv sync --all-extras
+make run
 ```
-
-### Pip install
-
-It might be possible to install pyqt5 using `pip`.
-Try with `pip insall pyqt5 --verbose` and if you see that it's stack at asking for license, then use the following command to silently accept it
-
-```shell
-> pip install pyqt5 --verbose --config-settings --confirm-license=
-```
-
 

@@ -58,17 +58,16 @@ make build
 Run `make check` before opening a pull request to execute Ruff checks, ty type checking, tests, and a package build.
 See [Dependency policy](docs/dependencies.md) for version constraints and update procedures.
 
-*PyQt5* is used to display GUI. To install PyQt5 head off to their [installation page](http://pyqt.sourceforge.net/Docs/PyQt5/installation.html).
-Package is currently heavily favouring Ubuntu as end OS. If you are one of the lucky ones then the installation requires:
+*PyQt6* is used for the desktop GUI and multimedia playback. Its binary wheels include the corresponding Qt
+libraries, so `uv sync` or `pip install cracker` installs the required Python and Qt components.
+
+On Ubuntu, the PulseAudio and Qt X11 compatibility libraries may also be required:
 
 ```shell
-$ sudo sh install.sh  # Installs pyqt5 on Ubuntu
-$ pip install -r .
+sudo apt-get install libpulse-mainloop-glib0 libegl1 libxcb-cursor0 libxkbcommon-x11-0
 ```
 
-For other OS you'd need *PyQt5* and *vlc*. 
-
-If you're on Ubuntu you'll most likely need additional `gstreamer` packages. Otherwise you'll see something like `defaultServiceProvider::requestService(): no service found for - "org.qt-project.qt.mediaplayer"`.
+See [macOS development notes](docs/macos.md) for the macOS setup.
 
 ## Usage
 
@@ -79,7 +78,7 @@ session, start URL, SSO region, account ID, role, and Polly region, then choose 
 Cracker writes the standard AWS shared configuration and starts `aws sso login`; this sign-in action requires
 [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
-Currently reading out is performed by downloading mp3 format of the request and then using `mpg123` to play it. This isn't optimal and should be changed, but, for now, it works.
+Cloud backends download audio to Cracker's cache and play it through Qt Multimedia.
 
 Suggested execution command
 

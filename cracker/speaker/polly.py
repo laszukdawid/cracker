@@ -3,9 +3,7 @@ import os
 from typing import List
 
 import boto3
-from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
-from PyQt5.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 from cracker.config import Configuration
 from cracker.mp3_helper import create_filename, save_mp3
@@ -173,13 +171,13 @@ class Polly(AbstractSpeaker):
     def _show_error_dialog(self, message: str, details: str = ""):
         """Shows an error dialog to the user"""
         msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setIcon(QMessageBox.Icon.Critical)
         msg_box.setWindowTitle("AWS Polly Connection Error")
         msg_box.setText(message)
         if details:
             msg_box.setInformativeText(details)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.exec_()
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
 
     def ask_polly(self, ssml_text: str, voice: str):
         """Connects to Polly and returns path to save mp3"""
@@ -211,12 +209,7 @@ class Polly(AbstractSpeaker):
         return dict(OutputFormat="mp3", TextType="ssml", Text=ssml_text, VoiceId=voice)
 
     def play_files(self, filepaths):
-        playlist = QMediaPlaylist(self.player)
-        for filepath in filepaths:
-            url = QUrl.fromLocalFile(filepath)
-            playlist.addMedia(QMediaContent(url))
-        self.player.setPlaylist(playlist)
-        self.player.play()
+        self.player.play_files(filepaths)
 
     def stop_text(self) -> None:
         self.player.stop()

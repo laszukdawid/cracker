@@ -1,7 +1,7 @@
 from typing import List
 
 from pynput import keyboard
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal
 
 
 class KeyBoardManager(QObject):

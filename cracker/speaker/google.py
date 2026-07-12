@@ -1,8 +1,6 @@
 import os
 
 from google.cloud import texttospeech
-from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
 from cracker.mp3_helper import create_filename, save_mp3
 from cracker.speaker import GOOGLE_LANGUAGES
@@ -69,12 +67,7 @@ class Google(AbstractSpeaker):
         return response
 
     def play_files(self, filepaths):
-        playlist = QMediaPlaylist(self.player)
-        for filepath in filepaths:
-            url = QUrl.fromLocalFile(filepath)
-            playlist.addMedia(QMediaContent(url))
-        self.player.setPlaylist(playlist)
-        self.player.play()
+        self.player.play_files(filepaths)
 
     def stop_text(self) -> None:
         self.player.stop()

@@ -1,6 +1,6 @@
 import logging
 
-from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QWidget
+from PyQt6.QtWidgets import QComboBox, QGridLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QWidget
 
 from cracker.aws_config import AWSSSOProfile, list_aws_profiles, load_sso_profile, save_sso_profile, start_sso_login
 from cracker.config import Configuration
@@ -124,10 +124,10 @@ class SpeakerConfig(QWidget):
             self._save_cracker_profile()
             start_sso_login(profile.profile_name)
         except Exception as error:
-            self._show_message(QMessageBox.Critical, "SSO sign-in failed", str(error))
+            self._show_message(QMessageBox.Icon.Critical, "SSO sign-in failed", str(error))
             return
         self._show_message(
-            QMessageBox.Information,
+            QMessageBox.Icon.Information,
             "SSO sign-in started",
             f"Complete the AWS sign-in in your browser for profile '{profile.profile_name}'.",
         )
@@ -137,8 +137,8 @@ class SpeakerConfig(QWidget):
         msg_box.setIcon(icon)
         msg_box.setWindowTitle(title)
         msg_box.setText(message)
-        msg_box.setStandardButtons(QMessageBox.Ok)
-        msg_box.exec_()
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
 
     def _save_cracker_profile(self) -> None:
         self.config.save_user_config(
@@ -168,28 +168,28 @@ class SpeakerConfig(QWidget):
             # Show result dialog
             msg_box = QMessageBox()
             if success:
-                msg_box.setIcon(QMessageBox.Information)
+                msg_box.setIcon(QMessageBox.Icon.Information)
                 msg_box.setWindowTitle("Connection Successful")
                 msg_box.setText("Successfully connected to AWS Polly!")
                 msg_box.setInformativeText(message)
             else:
-                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setIcon(QMessageBox.Icon.Warning)
                 msg_box.setWindowTitle("Connection Failed")
                 msg_box.setText("Failed to connect to AWS Polly")
                 msg_box.setInformativeText(message)
 
-            msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec_()
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.exec()
 
         except Exception as e:
             self._logger.error("Error testing connection: %s", e)
             msg_box = QMessageBox()
-            msg_box.setIcon(QMessageBox.Critical)
+            msg_box.setIcon(QMessageBox.Icon.Critical)
             msg_box.setWindowTitle("Connection Test Error")
             msg_box.setText("An unexpected error occurred while testing the connection")
             msg_box.setInformativeText(str(e))
-            msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec_()
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.exec()
 
     def confirm_action(self) -> bool:
         self._logger.info("Confirming action")
@@ -199,12 +199,6 @@ class SpeakerConfig(QWidget):
                 save_sso_profile(self._sso_profile())
             self._save_cracker_profile()
         except Exception as error:
-            self._show_message(QMessageBox.Critical, "Unable to save AWS settings", str(error))
+            self._show_message(QMessageBox.Icon.Critical, "Unable to save AWS settings", str(error))
             return False
         return True
-
-    def clearLayout(layout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
