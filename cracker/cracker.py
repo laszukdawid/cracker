@@ -18,7 +18,9 @@ from cracker.utils import get_logger
 class Cracker(object):
     """Logic for running the Cracker program"""
 
-    SPEAKER = {p.__name__.lower(): p for p in [Polly, Espeak, Google, Frogger]}
+    SPEAKER: dict[str, type[AbstractSpeaker]] = {
+        speaker.__name__.lower(): speaker for speaker in [Polly, Espeak, Google, Frogger]
+    }
     _logger = get_logger(__name__)
 
     def __init__(self, app: QApplication):
@@ -105,12 +107,14 @@ class Cracker(object):
     def toggle_read_text_clipboard(self):
         """Reads out text from the clipboard with selected speaker."""
         self._logger.debug("Reading text from clipboard")
-        if self.player.state() == QMediaPlayer.PlayingState:
+        if self.player.state() == QMediaPlayer.State.PlayingState:
             self.stop_text()
             self.player.stop()
         else:
             self.stop_text()
-            text = self.app.clipboard().text()
+            clipboard = self.app.clipboard()
+            assert clipboard is not None
+            text = clipboard.text()
 
             self.text_parser.parser_rules = self.config.regex_config
             text = self.text_parser.reduce_text(text)
@@ -122,7 +126,7 @@ class Cracker(object):
         self._last_pid = self.speaker.read_text(text, **speaker_config)
 
     def toggle_read(self):
-        if self.player.state() == QMediaPlayer.PausedState:
+        if self.player.state() == QMediaPlayer.State.PausedState:
             self.player.play()
         else:
             self.player.pause()

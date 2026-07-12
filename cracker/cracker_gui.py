@@ -1,6 +1,5 @@
-from typing import Dict, Type, Union
-
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtMultimedia import QMediaPlayer
 from PyQt5.QtWidgets import (
     QAction,
@@ -17,12 +16,10 @@ from PyQt5.QtWidgets import (
 
 from cracker.config import Configuration
 from cracker.speaker.abstract_speaker import AbstractSpeaker
-from cracker.speaker.espeak import Espeak
-from cracker.speaker.polly import Polly
 from cracker.utils import get_logger
 from cracker.view.config_window import ConfigWindow
 
-SpeakersType = Dict[str, Union[Type[Espeak], Type[Polly]]]
+SpeakersType = dict[str, type[AbstractSpeaker]]
 
 
 class MainWindow(QMainWindow):
@@ -57,7 +54,7 @@ class MainWindow(QMainWindow):
         _exit = QAction("Exit", self)
         _exit.setShortcut("Ctrl+Q")
         _exit.setStatusTip("Exit application")
-        _exit.triggered.connect(self.closeEvent)
+        _exit.triggered.connect(self.request_close)
 
         _save = QAction("Save config", self)
         _save.setShortcut("Ctrl+S")
@@ -101,16 +98,20 @@ class MainWindow(QMainWindow):
 
         # MenuBar and ToolBar
         menubar = self.menuBar()
+        assert menubar is not None
 
         fileAction = menubar.addMenu("&File")
+        assert fileAction is not None
         fileAction.addAction(_save)
         fileAction.addAction(_exit)
         textAction = menubar.addMenu("&Text")
+        assert textAction is not None
         textAction.addAction(self.read_action)
         textAction.addAction(self.clipboard_read_action)
         textAction.addAction(self.stop_action)
         textAction.addAction(self.toggle_action)
         reduceAction = menubar.addMenu("&Reduce")
+        assert reduceAction is not None
         reduceAction.addAction(self.reduce_action)
         reduceAction.addAction(self.wiki_action)
         reduceAction.addAction(self.cite_action)
@@ -118,16 +119,19 @@ class MainWindow(QMainWindow):
         # toolbarExit = self.addToolBar('Exit')
         # toolbarExit.addAction(_exit)
         toolbarText = self.addToolBar("Text")
+        assert toolbarText is not None
         toolbarText.addAction(self.read_action)
         toolbarText.addAction(self.clipboard_read_action)
         toolbarText.addAction(self.stop_action)
         toolbarText.addAction(self.toggle_action)
         toolbarReduce = self.addToolBar("Reduce")
+        assert toolbarReduce is not None
         toolbarReduce.addAction(self.reduce_action)
         toolbarReduce.addAction(self.wiki_action)
         toolbarReduce.addAction(self.cite_action)
 
         toolbarConfig = self.addToolBar("Config")
+        assert toolbarConfig is not None
         toolbarConfig.addAction(self.toggle_config_window)
 
     def set_widgets(self):
@@ -162,7 +166,7 @@ class MainWindow(QMainWindow):
 
         # Volume - label and slider
         self.volumeLabel = QLabel("Volume:")
-        self.volumeW = QSlider(Qt.Horizontal, self)  # Range: 0 -- 100
+        self.volumeW = QSlider(Qt.Orientation.Horizontal, self)  # Range: 0 -- 100
         self.volumeW.setValue(50)
         self.volumeW.valueChanged.connect(self.change_volume)
         menuLayout.addWidget(self.volumeLabel, 0, 4)
@@ -202,11 +206,15 @@ class MainWindow(QMainWindow):
         self.change_speed(self.speedW.value())
         self.change_language(self.config.language)
 
-    def closeEvent(self, close_event):
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Triggers CloseEvent and handles closing gracefully"""
         self.closeAppEvent.emit()
         if hasattr(self, "speaker"):
             del self.speaker
+        if a0 is not None:
+            a0.accept()
+
+    def request_close(self) -> None:
         self.close()
 
     def save_config(self):
@@ -252,19 +260,19 @@ class MainWindow(QMainWindow):
         self.save_config()
 
     def toggle_label(self, state):
-        if QMediaPlayer.PlayingState == state:
+        if QMediaPlayer.State.PlayingState == state:
             self.toggle_action.setText("Pause")
             self.toggle_action.setDisabled(False)
             self.stop_action.setDisabled(False)
             self.read_action.setDisabled(True)
             self.clipboard_read_action.setDisabled(True)
-        elif QMediaPlayer.StoppedState == state:
+        elif QMediaPlayer.State.StoppedState == state:
             self.toggle_action.setText("Pause")
             self.toggle_action.setDisabled(True)
             self.stop_action.setDisabled(True)
             self.read_action.setDisabled(False)
             self.clipboard_read_action.setDisabled(False)
-        elif QMediaPlayer.PausedState == state:
+        elif QMediaPlayer.State.PausedState == state:
             self.toggle_action.setText("Resume")
             self.stop_action.setDisabled(False)
             self.toggle_action.setDisabled(False)
