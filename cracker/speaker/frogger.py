@@ -1,7 +1,7 @@
 import asyncio
 from typing import List
 
-import requests
+import httpx
 from PyQt5.QtCore import QUrl
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
@@ -10,6 +10,10 @@ from cracker.text_parser import TextParser
 from cracker.utils import get_logger
 
 from .abstract_speaker import AbstractSpeaker
+
+
+class FroggerError(RuntimeError):
+    """Raised when the Frogger service cannot produce an audio file."""
 
 
 class Frogger(AbstractSpeaker):
@@ -25,14 +29,15 @@ class Frogger(AbstractSpeaker):
 
     LANGUAGES = FROGGER_LANGUAGES
     URL = "http://localhost:8000/tts"
+    TIMEOUT_SECONDS = 30.0
 
     def __init__(self, player):
         self.player = player
-        self.playlist = QMediaPlaylist(self.player)
-        self.playlist.setPlaybackMode(QMediaPlaylist.Sequential)
 
     def __del__(self):
-        self.stop_text()
+        player = getattr(self, "player", None)
+        if player is not None:
+            player.stop()
 
     def read_text(self, text: str, **config) -> None:
         self._logger.debug("Reading text: %s", text)
@@ -47,39 +52,42 @@ class Frogger(AbstractSpeaker):
             self._logger.exception("Failed to read text with Frogger")
         return
 
-    async def _read_text(self, parted_text: List[str], **config) -> None:
-        async def ask(i, text, voice):
-            self._logger.debug(f"asking [{i}]: {text}")
-            response = await asyncio.to_thread(
-                requests.get,
-                self.URL,
-                params={"text": text, "voice": voice},
-                timeout=30,
-            )
+    async def _fetch_part(self, client: httpx.AsyncClient, index: int, text: str, voice: str) -> str:
+        self._logger.debug("Requesting Frogger part %d: %s", index, text)
+        try:
+            response = await client.get(self.URL, params={"text": text, "voice": voice})
+            response.raise_for_status()
+        except httpx.HTTPError as error:
+            raise FroggerError(f"Frogger request for part {index} failed: {error}") from error
 
-            if response.status_code != 200:
-                raise RuntimeError(f"Unexpected response from Frogger: {response}")
-            return response.json()["filename"]
+        try:
+            filename = response.json()["filename"]
+        except (KeyError, TypeError, ValueError) as error:
+            raise FroggerError(f"Frogger returned an invalid response for part {index}") from error
+        if not isinstance(filename, str) or not filename:
+            raise FroggerError(f"Frogger returned an invalid filename for part {index}")
+        return filename
 
-        requests_in_order = [ask(i, text, config["voice"]) for i, text in enumerate(parted_text)]
-        filepaths = await asyncio.gather(*requests_in_order)
+    async def _read_text(
+        self,
+        parted_text: List[str],
+        *,
+        voice: str,
+        client: httpx.AsyncClient | None = None,
+        **config,
+    ) -> None:
+        async def fetch_all(active_client: httpx.AsyncClient) -> list[str]:
+            requests_in_order = [
+                self._fetch_part(active_client, index, text, voice) for index, text in enumerate(parted_text)
+            ]
+            return await asyncio.gather(*requests_in_order)
+
+        if client is None:
+            async with httpx.AsyncClient(timeout=self.TIMEOUT_SECONDS) as active_client:
+                filepaths = await fetch_all(active_client)
+        else:
+            filepaths = await fetch_all(client)
         self.play_files(filepaths)
-
-    def play_file_first(self, filepath):
-        self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(filepath)))
-
-        self.player.setPlaylist(self.playlist)
-
-        if self.player.state() != self.player.PlayingState:
-            self.player.play()
-
-    def play_file(self, filepath):
-        self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(filepath)))
-
-        # self.player.setPlaylist(self.playlist)
-
-        if self.player.state() != self.player.PlayingState:
-            self.player.play()
 
     def play_files(self, filepaths):
         playlist = QMediaPlaylist(self.player)
@@ -97,11 +105,3 @@ class Frogger(AbstractSpeaker):
             self.player.play()
         else:
             self.player.pause()
-
-    def ask(self, text: str, voice: str):
-        """Connect to local server on host localhost:5002 and extract wav from stream"""
-        response = requests.get(self.URL, params={"text": text, "voice": voice})
-
-        if response.status_code != 200:
-            raise Exception(f"Error: Unexpected response {response}")
-        return response.json()["filename"]
