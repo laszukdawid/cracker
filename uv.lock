@@ -144,10 +144,10 @@ test = [
 requires-dist = [
     { name = "boto3", specifier = ">=1.43,<2" },
     { name = "build", marker = "extra == 'build'" },
-    { name = "darkdetect", specifier = "==0.8.*" },
+    { name = "darkdetect", specifier = ">=0.8,<1" },
     { name = "google-cloud-texttospeech", specifier = ">=2.37,<3" },
-    { name = "pynput", specifier = "==1.7.*" },
-    { name = "pyqt5", specifier = "==5.15.*" },
+    { name = "pynput", specifier = ">=1.8.2,<2" },
+    { name = "pyqt5", specifier = ">=5.15.11,<6" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pyyaml" },
     { name = "ruff", marker = "extra == 'dev'" },
@@ -553,7 +553,7 @@ wheels = [
 
 [[package]]
 name = "pynput"
-version = "1.7.8"
+version = "1.8.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "evdev", marker = "'linux' in sys_platform" },
@@ -562,8 +562,9 @@ dependencies = [
     { name = "python-xlib", marker = "'linux' in sys_platform" },
     { name = "six" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/86/c6/e2d415610cfbc78308bee44218a46124aaa3301b1df08814df819b2254a1/pynput-1.8.2.tar.gz", hash = "sha256:f493c87157cd3861b4468f7f896857051762f44ed26f1b641e7cc5840a457087", size = 82818, upload-time = "2026-05-12T19:11:39.464Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/77/23/2eeda4a156da594411abdb606654b681091e18f5e62d92a9c0965c101598/pynput-1.7.8-py2.py3-none-any.whl", hash = "sha256:a5d2e492dc3906ff85a5fe66bf05c440ce716fcc2d8bd988bc357b5d2298c577", size = 90363, upload-time = "2025-02-28T18:27:12.151Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/98/bbeb760852adb27f166ce1617f0e51aabb15f21b1e60ea703f2aed3c78ac/pynput-1.8.2-py2.py3-none-any.whl", hash = "sha256:8cc38cf13a6ab2749cb375678be8a0fd705d7ce49c8001ff5db4007a723bbef1", size = 92028, upload-time = "2026-05-12T19:11:37.89Z" },
 ]
 
 [[package]]
