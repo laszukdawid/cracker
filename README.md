@@ -56,6 +56,7 @@ make build
 ```
 
 Run `make check` before opening a pull request to execute Ruff checks, ty type checking, tests, and a package build.
+See [Dependency policy](docs/dependencies.md) for version constraints and update procedures.
 
 *PyQt5* is used to display GUI. To install PyQt5 head off to their [installation page](http://pyqt.sourceforge.net/Docs/PyQt5/installation.html).
 Package is currently heavily favouring Ubuntu as end OS. If you are one of the lucky ones then the installation requires:
