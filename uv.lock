@@ -156,17 +156,17 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "boto3", specifier = ">=1.43,<2" },
-    { name = "build", marker = "extra == 'build'" },
+    { name = "build", marker = "extra == 'build'", specifier = ">=1.3,<2" },
     { name = "darkdetect", specifier = ">=0.8,<1" },
     { name = "google-cloud-texttospeech", specifier = ">=2.37,<3" },
     { name = "httpx", specifier = ">=0.28.1,<1" },
     { name = "pynput", specifier = ">=1.8.2,<2" },
     { name = "pyqt5", specifier = ">=5.15.11,<6" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "pyyaml" },
-    { name = "ruff", marker = "extra == 'dev'" },
-    { name = "twine", marker = "extra == 'build'" },
-    { name = "ty", marker = "extra == 'dev'" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.4,<9" },
+    { name = "pyyaml", specifier = ">=6.0.3,<7" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.21,<1" },
+    { name = "twine", marker = "extra == 'build'", specifier = ">=6.2,<7" },
+    { name = "ty", marker = "extra == 'dev'", specifier = ">=0.0.58,<0.1" },
 ]
 provides-extras = ["dev", "build", "test"]
 

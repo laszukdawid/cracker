@@ -10,7 +10,7 @@ dependencies = [
   "google-cloud-texttospeech>=2.37,<3",
   "darkdetect>=0.8,<1",
   "httpx>=0.28.1,<1",
-  "pyyaml",
+  "pyyaml>=6.0.3,<7",
 ]
 name = "cracker"
 readme = "README.md"
@@ -21,9 +21,9 @@ dynamic = ["version"]
 cracker = "cracker.main:main"
 
 [project.optional-dependencies]
-dev = ["ruff", "ty"]
-build = ["build", "twine"]
-test = ["pytest"]
+dev = ["ruff>=0.15.21,<1", "ty>=0.0.58,<0.1"]
+build = ["build>=1.3,<2", "twine>=6.2,<7"]
+test = ["pytest>=8.4,<9"]
 
 [tool.setuptools.dynamic]
 version = { attr = "cracker.__version__" }
