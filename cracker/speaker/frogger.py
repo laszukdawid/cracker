@@ -1,9 +1,9 @@
 import asyncio
-from typing import Dict, List, Optional
+from typing import List
 
 import requests
 from PyQt5.QtCore import QUrl
-from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer, QMediaPlaylist
+from PyQt5.QtMultimedia import QMediaContent, QMediaPlaylist
 
 from cracker.speaker import FROGGER_LANGUAGES
 from cracker.text_parser import TextParser
@@ -41,83 +41,29 @@ class Frogger(AbstractSpeaker):
         split_text = TextParser.split_text_per_sentence(text)
 
         self._logger.debug("Requesting from local server")
-        asyncio.run(self._read_text(split_text, **config))
+        try:
+            asyncio.run(self._read_text(split_text, **config))
+        except Exception:
+            self._logger.exception("Failed to read text with Frogger")
         return
 
     async def _read_text(self, parted_text: List[str], **config) -> None:
-        filenames: Dict[int, Optional[str]] = {i: None for i in range(len(parted_text))}
-        condition = asyncio.Condition()
-
-        async def ask(i, text, voice, condition, fnames: Dict[int, Optional[str]]):
+        async def ask(i, text, voice):
             self._logger.debug(f"asking [{i}]: {text}")
-            await asyncio.sleep(0.1 * i)  # To make sure that it's in order
-            response = requests.get(self.URL, params={"text": text, "voice": voice})
+            response = await asyncio.to_thread(
+                requests.get,
+                self.URL,
+                params={"text": text, "voice": voice},
+                timeout=30,
+            )
 
             if response.status_code != 200:
-                raise Exception(f"Error: Unexpected response {response}")
-            filename = response.json()["filename"]
+                raise RuntimeError(f"Unexpected response from Frogger: {response}")
+            return response.json()["filename"]
 
-            async with condition:
-                fnames[i] = filename
-                condition.notify_all()
-
-        def mediaChangeHook(status: int, playlist: QMediaPlaylist, player: QMediaPlayer):
-            if status != QMediaPlayer.EndOfMedia:
-                return
-            # If no playlist set -> set it and play
-            if player.playlist() is None:
-                self._logger.debug("Setting playlist")
-                playlist.setCurrentIndex(0)
-                player.setPlaylist(playlist)
-                player.play()
-
-            # If already playing playlist -> play next
-            elif player.playlist().currentIndex() < player.playlist().mediaCount() - 1:
-                player.playlist().next()
-
-            # If finished playing playlist -> reset
-            else:
-                self._logger.debug("Reseting playlist")
-                playlist.clear()
-                player.mediaStatusChanged.disconnect()
-
-        async def monitor(d_fnames: Dict[int, Optional[str]], condition, player: QMediaPlayer):
-            current_media = 0
-
-            while True:
-                # Break whole loop if all workers have finished
-                if all([f is not None for f in d_fnames.values()]):
-                    self._logger.debug("All files have been downloaded")
-                    break
-
-                async with condition:
-                    await condition.wait()
-                    if player.state() == player.StoppedState:
-                        self._logger.debug(f"Currently playing media num {current_media}")
-                        media = QMediaContent(QUrl.fromLocalFile(d_fnames[current_media]))
-                        player.setMedia(media)
-                        player.play()
-                        current_media += 1
-
-            # When finished updating filenames, the remaining files are added to the playlist
-            playlist = QMediaPlaylist()
-            for idx in range(current_media, len(d_fnames)):
-                # Add only the files that haven't been listened to yet
-                filename = d_fnames.get(idx)
-                if filename is None:
-                    break
-                playlist.addMedia(QMediaContent(QUrl.fromLocalFile(filename)))
-
-            # Update hook to play next file when current one finishes, and reset playlist when finished
-            player.mediaStatusChanged.connect(lambda status: mediaChangeHook(status, playlist, player))
-            current_media = 0
-
-        cors = []
-        for i, text in enumerate(parted_text):
-            cors.append(ask(i, text, voice=config["voice"], condition=condition, fnames=filenames))
-
-        cors.append(monitor(filenames, condition, self.player))
-        await asyncio.wait(cors)
+        requests_in_order = [ask(i, text, config["voice"]) for i, text in enumerate(parted_text)]
+        filepaths = await asyncio.gather(*requests_in_order)
+        self.play_files(filepaths)
 
     def play_file_first(self, filepath):
         self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(filepath)))

@@ -142,7 +142,7 @@ class Cracker(object):
         Important: Each speaker has its own configuration. These values should be updated on change.
         """
         self.speaker = self.get_speaker(speaker_name, self.player)
-        self.gui.change_speaker(speaker_name)
+        self.gui.change_speaker(speaker_name, self.speaker)
 
     def set_action(self):
         self.gui.stop_action.triggered.connect(self.stop_text)
@@ -151,6 +151,7 @@ class Cracker(object):
         self.gui.toggle_action.triggered.connect(self.toggle_read)
         self.gui.reduce_action.triggered.connect(self.reduce_text)
         self.gui.wiki_action.triggered.connect(self.wiki_text)
+        self.gui.cite_action.triggered.connect(self.reduce_cite)
         self.gui.speakerW.currentTextChanged.connect(self.change_speaker)
 
         self.key_manager.GlobalReadSignal.connect(self.toggle_read_text_clipboard)
