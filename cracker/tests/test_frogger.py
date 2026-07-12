@@ -1,7 +1,10 @@
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from cracker.speaker.frogger import Frogger
+import httpx
+import pytest
+
+from cracker.speaker.frogger import Frogger, FroggerError
 
 
 def test_read_text_downloads_parts_and_plays_them_in_order():
@@ -9,22 +12,44 @@ def test_read_text_downloads_parts_and_plays_them_in_order():
     frogger.player = MagicMock()
     frogger.play_files = MagicMock()
 
-    responses = {}
-    for text, filename in [("First.", "first.wav"), ("Second.", "second.wav")]:
-        response = MagicMock(status_code=200)
-        response.json.return_value = {"filename": filename}
-        responses[text] = response
+    filenames = {"First.": "first.wav", "Second.": "second.wav"}
 
-    def get_response(url, params, timeout):
-        return responses[params["text"]]
+    def respond(request: httpx.Request) -> httpx.Response:
+        text = request.url.params["text"]
+        return httpx.Response(200, json={"filename": filenames[text]})
 
-    with patch("cracker.speaker.frogger.requests.get", side_effect=get_response) as get:
-        asyncio.run(frogger._read_text(["First.", "Second."], voice="English"))
+    async def run_test():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            await frogger._read_text(["First.", "Second."], voice="English", client=client)
+
+    asyncio.run(run_test())
 
     frogger.play_files.assert_called_once_with(["first.wav", "second.wav"])
-    assert get.call_count == 2
-    get.assert_any_call(
-        frogger.URL,
-        params={"text": "First.", "voice": "English"},
-        timeout=30,
-    )
+
+
+def test_frogger_reports_http_failures():
+    frogger = object.__new__(Frogger)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, request=request)
+
+    async def run_test():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            await frogger._fetch_part(client, 0, "Hello", "English")
+
+    with pytest.raises(FroggerError, match="part 0 failed"):
+        asyncio.run(run_test())
+
+
+def test_frogger_rejects_invalid_responses():
+    frogger = object.__new__(Frogger)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"unexpected": True}, request=request)
+
+    async def run_test():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            await frogger._fetch_part(client, 0, "Hello", "English")
+
+    with pytest.raises(FroggerError, match="invalid response"):
+        asyncio.run(run_test())
