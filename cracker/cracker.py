@@ -103,6 +103,7 @@ class Cracker(object):
 
         self.text_parser.parser_rules = self.config.regex_config
         text = self.text_parser.reduce_text(text)
+        self.gui.set_read_source("textarea", text)
         self._read(text)
 
     def toggle_read_text_clipboard(self):
@@ -119,6 +120,7 @@ class Cracker(object):
 
             self.text_parser.parser_rules = self.config.regex_config
             text = self.text_parser.reduce_text(text)
+            self.gui.set_read_source("clipboard", text)
             self._read(text)
 
     def _read(self, text):

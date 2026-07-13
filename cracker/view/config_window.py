@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6.QtWidgets import QGridLayout, QPushButton, QTabWidget, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QTabWidget, QVBoxLayout, QWidget
 
 from cracker.config import Configuration
 from cracker.view.parser_config_tab import ParserConfig
@@ -17,30 +17,37 @@ class ConfigWindow(QWidget):
         self.speaker = speaker
         self.setWindowTitle("Configuration")
 
+        # Tabs rendered as a segmented (pill) control via the global stylesheet.
         self.tabs = QTabWidget()
+        self.tabs.setDocumentMode(True)
+        tab_bar = self.tabs.tabBar()
+        if tab_bar is not None:
+            tab_bar.setExpanding(False)
 
-        # Parser tab
         self.parser_tab = ParserConfig()
         self.tabs.addTab(self.parser_tab, "Parser")
 
-        # Speakers tab
         self.speakers_tab = SpeakerConfig()
         self.tabs.addTab(self.speakers_tab, "Speakers")
 
-        # Main layout
-        self._layout = QGridLayout()
-        self.setLayout(self._layout)
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(14, 12, 14, 12)
+        self._layout.setSpacing(10)
+        self._layout.addWidget(self.tabs)
 
+        footer = QHBoxLayout()
+        footer.addStretch(1)
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.released.connect(self.cancel_action)
-        self.confirm_btn = QPushButton("Ok")
+        self.confirm_btn = QPushButton("OK")
+        self.confirm_btn.setObjectName("primary")
+        self.confirm_btn.setDefault(True)
         self.confirm_btn.released.connect(self.confirm_action)
+        footer.addWidget(self.cancel_btn)
+        footer.addWidget(self.confirm_btn)
+        self._layout.addLayout(footer)
 
-        self._layout.addWidget(self.tabs, 1, 0, 1, 4)
-        self._layout.addWidget(self.cancel_btn, 2, 2)
-        self._layout.addWidget(self.confirm_btn, 2, 3)
-
-        self.resize(500, self.height())
+        self.resize(560, 460)
 
     def init(self):
         self._logger.debug("Init config window")

@@ -15,7 +15,29 @@ from cracker.utils import LoggerConfig
 
 
 class ThemeBridge(QObject):
+    """Marshals OS colour-scheme changes onto the GUI thread.
+
+    ``darkdetect.listener`` emits ``theme_changed`` from a background thread;
+    because the slot is a bound method of this main-thread QObject, a cross-thread
+    emit is delivered via a queued connection, so palette/stylesheet/icon updates
+    always run on the GUI thread.
+    """
+
     theme_changed = pyqtSignal(object)
+
+    def __init__(self, app):
+        super().__init__()
+        self._app = app
+        self._gui = None
+        self.theme_changed.connect(self._apply_theme_change)
+
+    def set_gui(self, gui):
+        self._gui = gui
+
+    def _apply_theme_change(self, theme):
+        apply_theme(self._app, theme)
+        if self._gui is not None:
+            self._gui.refresh_theme_icons()
 
 
 def parse_args(argv=None):
@@ -39,14 +61,16 @@ def main(argv=None):
     app.setStyle("Fusion")
 
     apply_theme(app, darkdetect.theme())
-    theme_bridge = ThemeBridge()
-    theme_bridge.theme_changed.connect(lambda theme: apply_theme(app, theme))
-    t = threading.Thread(target=darkdetect.listener, args=(theme_bridge.theme_changed.emit,))
-    t.daemon = True
-    t.start()
+    theme_bridge = ThemeBridge(app)
+    listener_thread = threading.Thread(target=darkdetect.listener, args=(theme_bridge.theme_changed.emit,))
+    listener_thread.daemon = True
+    listener_thread.start()
 
     cracker = Cracker(app)
     cracker.run()
+
+    # apply_theme swaps the stylesheet; painted QIcons also need rebuilding.
+    theme_bridge.set_gui(cracker.gui)
 
     icon_path = importlib.resources.files("cracker").joinpath("icon.png")
     icon = QIcon(str(icon_path))
