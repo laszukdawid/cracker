@@ -22,4 +22,5 @@ def test_parse_args_defaults_to_info_mode():
 def test_dark_theme_applies_an_owned_qt_palette(qt_app: QApplication):
     apply_theme(qt_app, "dark")
 
-    assert qt_app.palette().color(QPalette.ColorRole.Window).getRgb()[:3] == (45, 45, 45)
+    # Dark window background comes from the DARK token set (#1b1b1f).
+    assert qt_app.palette().color(QPalette.ColorRole.Window).getRgb()[:3] == (27, 27, 31)

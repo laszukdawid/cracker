@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QMessageBox
 
 from cracker.config import Configuration
 from cracker.mp3_helper import create_filename, save_mp3
+from cracker.read_along import AudioSegment, WordMark, parse_speech_marks
 from cracker.speaker import POLLY_LANGUAGES
 from cracker.ssml import SSML
 from cracker.text_parser import TextParser
@@ -27,7 +28,7 @@ class Polly(AbstractSpeaker):
 
     def __init__(self, player):
         self._cached_ssml = SSML()
-        self._cached_filepaths = []
+        self._cached_segments: list[AudioSegment] = []
         self._cached_voice = ""
 
         self.config = Configuration()
@@ -47,8 +48,8 @@ class Polly(AbstractSpeaker):
 
     def __del__(self):
         try:
-            for filepath in self._cached_filepaths:
-                os.remove(filepath)
+            for segment in getattr(self, "_cached_segments", []):
+                os.remove(segment.path)
         except OSError, TypeError:
             pass
 
@@ -129,13 +130,22 @@ class Polly(AbstractSpeaker):
             )
             return False, error_message
 
-    def save_cache(self, ssml: SSML, filepaths: List[str], voice):
+    def save_cache(self, ssml: SSML, segments: List[AudioSegment], voice):
+        # Remove previously cached temp files that the new cache no longer uses
+        # (a shorter read leaves higher-indexed mp3s orphaned otherwise).
+        new_paths = {segment.path for segment in segments}
+        for old_segment in self._cached_segments:
+            if old_segment.path not in new_paths:
+                try:
+                    os.remove(old_segment.path)
+                except OSError:
+                    pass
         self._cached_ssml = ssml
-        self._cached_filepaths = filepaths
+        self._cached_segments = segments
         self._cached_voice = voice
 
     def read_text(self, text: str, **config) -> None:
-        """Reads out text."""
+        """Reads out text, attaching per-word speech marks to each segment."""
         text = self.clean_text(text)
         text = TextParser.escape_tags(text)
         split_text = TextParser.split_text(text)
@@ -149,24 +159,58 @@ class Polly(AbstractSpeaker):
 
         if self._cached_ssml == ssml and self._cached_voice == voice:
             self._logger.debug("Playing cached file")
-            filepaths = self._cached_filepaths
+            segments = self._cached_segments
         else:
             self._logger.debug("Request from Polly")
-            filepaths = []
+            segments = []
             # TODO: This should obviously be asynchronous!
             try:
                 for idx, parted_text in enumerate(split_text):
-                    parted_ssml = SSML(parted_text, rate=rate, volume=volume)
-                    response = self.ask_polly(str(parted_ssml), voice)
+                    parted_ssml = str(SSML(parted_text, rate=rate, volume=volume))
+                    response = self.ask_polly(parted_ssml, voice)
                     filename = create_filename(AbstractSpeaker.TMP_FILEPATH, idx)
                     saved_filepath = save_mp3(response["AudioStream"].read(), filename)
-                    filepaths.append(saved_filepath)
-                self.save_cache(ssml, filepaths, voice)
+                    marks = self._fetch_marks(parted_ssml, voice)
+                    segments.append(AudioSegment(path=saved_filepath, marks=marks))
+                self.save_cache(ssml, segments, voice)
             except (RuntimeError, Exception) as e:
                 self._logger.error("Failed to read text with Polly: %s", e)
+                # Drop the partial files written this attempt, then invalidate
+                # the cache: a failed segment may have overwritten deterministic
+                # temp files the previous cache still referenced, so a later
+                # cache hit must not replay corrupted/mixed audio.
+                for segment in segments:
+                    try:
+                        os.remove(segment.path)
+                    except OSError:
+                        pass
+                self._cached_ssml = SSML()
+                self._cached_segments = []
+                self._cached_voice = ""
                 return  # Exit gracefully without crashing
-        self.play_files(filepaths)
+        self.player.play_segments(segments)
         return
+
+    def _fetch_marks(self, ssml_text: str, voice: str) -> List[WordMark]:
+        """Requests word-level speech marks for one SSML chunk.
+
+        Returns an empty list on any failure so playback (and the estimated
+        read-along fallback) still works without the marks.
+        """
+        if self.client is None:
+            return []
+        try:
+            response = self.client.synthesize_speech(
+                OutputFormat="json",
+                TextType="ssml",
+                Text=ssml_text,
+                VoiceId=voice,
+                SpeechMarkTypes=["word"],
+            )
+            return parse_speech_marks(response["AudioStream"].read())
+        except Exception as error:
+            self._logger.warning("Could not fetch Polly speech marks: %s", error)
+            return []
 
     def _show_error_dialog(self, message: str, details: str = ""):
         """Shows an error dialog to the user"""
@@ -207,9 +251,6 @@ class Polly(AbstractSpeaker):
     def create_speech(ssml_text: str, voice: str):
         """Prepares speech query to Polly"""
         return dict(OutputFormat="mp3", TextType="ssml", Text=ssml_text, VoiceId=voice)
-
-    def play_files(self, filepaths):
-        self.player.play_files(filepaths)
 
     def stop_text(self) -> None:
         self.player.stop()

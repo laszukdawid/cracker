@@ -1,9 +1,23 @@
 import logging
 
-from PyQt6.QtWidgets import QComboBox, QGridLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QWidget
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from cracker.aws_config import AWSSSOProfile, list_aws_profiles, load_sso_profile, save_sso_profile, start_sso_login
 from cracker.config import Configuration
+
+_LABEL_WIDTH = 120
 
 
 class SpeakerConfig(QWidget):
@@ -17,14 +31,13 @@ class SpeakerConfig(QWidget):
         self.aws_profile = user_config.get("polly", {}).get("profile_name", "default")
         self.aws_region = user_config.get("polly", {}).get("region_name", "")
 
-        self._layout = QGridLayout()
-        self.setLayout(self._layout)
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(12, 12, 12, 12)
+        self._layout.setSpacing(12)
 
-        # Name section "AWS Polly"
-        self.aws_polly_label = QLabel("AWS Polly")
-        self._layout.addWidget(self.aws_polly_label, 0, 0, 1, 2)
+        # --- AWS Polly card ---------------------------------------------
+        polly_card, polly_grid = self._card("AWS Polly")
 
-        # AWS profile selector
         self.aws_profile_label = QLabel("AWS Profile")
         self.aws_profile_input = QComboBox()
         self.aws_profile_input.setEditable(True)
@@ -33,43 +46,71 @@ class SpeakerConfig(QWidget):
         if self.aws_profile not in profiles:
             self.aws_profile_input.addItem(self.aws_profile)
         self.aws_profile_input.setCurrentText(self.aws_profile)
-        self._layout.addWidget(self.aws_profile_label, 1, 0)
-        self._layout.addWidget(self.aws_profile_input, 1, 1)
+        self._add_row(polly_grid, 0, self.aws_profile_label, self.aws_profile_input)
 
-        # AWS region selector
         self.aws_region_label = QLabel("AWS Region")
         self.aws_region_input = QLineEdit()
-        self.aws_region_input.setPlaceholderText("AWS Region")
+        self.aws_region_input.setPlaceholderText("us-east-1")
         self.aws_region_input.setText(self.aws_region)
-        self._layout.addWidget(self.aws_region_label, 2, 0)
-        self._layout.addWidget(self.aws_region_input, 2, 1)
+        self._add_row(polly_grid, 1, self.aws_region_label, self.aws_region_input)
 
-        self.sso_label = QLabel("AWS IAM Identity Center (SSO)")
-        self._layout.addWidget(self.sso_label, 3, 0, 1, 2)
+        self._layout.addWidget(polly_card)
 
-        self.sso_session_input = self._add_input(4, "SSO Session", "company")
-        self.sso_start_url_input = self._add_input(5, "Start URL", "https://company.awsapps.com/start")
-        self.sso_region_input = self._add_input(6, "SSO Region", "us-east-1")
-        self.sso_account_id_input = self._add_input(7, "AWS Account ID", "123456789012")
-        self.sso_role_name_input = self._add_input(8, "Role Name", "DeveloperAccess")
+        # --- AWS IAM Identity Center (SSO) card -------------------------
+        sso_card, sso_grid = self._card("AWS IAM Identity Center (SSO)")
 
-        self.sso_login_btn = QPushButton("Save and sign in with SSO")
+        self.sso_session_input = self._add_input(sso_grid, 0, "SSO Session", "company")
+        self.sso_start_url_input = self._add_input(sso_grid, 1, "Start URL", "https://company.awsapps.com/start")
+        self.sso_region_input = self._add_input(sso_grid, 2, "SSO Region", "us-east-1")
+        self.sso_account_id_input = self._add_input(sso_grid, 3, "AWS Account ID", "123456789012")
+        self.sso_role_name_input = self._add_input(sso_grid, 4, "Role Name", "DeveloperAccess")
+
+        action_row = QHBoxLayout()
+        # "&&" renders a literal "&" (a single "&" would be taken as a mnemonic).
+        self.sso_login_btn = QPushButton("Save && sign in with SSO")
+        self.sso_login_btn.setObjectName("primary")
         self.sso_login_btn.released.connect(self.sign_in_with_sso)
-        self._layout.addWidget(self.sso_login_btn, 9, 0, 1, 2)
-
-        # Test connection button
         self.test_connection_btn = QPushButton("Test Connection")
         self.test_connection_btn.released.connect(self.test_connection)
-        self._layout.addWidget(self.test_connection_btn, 10, 0, 1, 2)
+        action_row.addWidget(self.sso_login_btn, 1)
+        action_row.addWidget(self.test_connection_btn, 1)
+        sso_grid.addLayout(action_row, 5, 0, 1, 2)
+
+        self._layout.addWidget(sso_card)
+        self._layout.addStretch(1)
 
         self.aws_profile_input.currentTextChanged.connect(self.load_selected_profile)
         self.load_selected_profile(self.aws_profile)
 
-    def _add_input(self, row: int, label: str, placeholder: str) -> QLineEdit:
+    def _card(self, title: str) -> tuple[QFrame, QGridLayout]:
+        card = QFrame()
+        card.setObjectName("card")
+        card.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        outer = QVBoxLayout(card)
+        outer.setContentsMargins(14, 12, 14, 14)
+        outer.setSpacing(10)
+
+        heading = QLabel(title)
+        heading.setObjectName("cardTitle")
+        outer.addWidget(heading)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        grid.setVerticalSpacing(8)
+        grid.setColumnStretch(1, 1)
+        outer.addLayout(grid)
+        return card, grid
+
+    def _add_row(self, grid: QGridLayout, row: int, label: QLabel, widget: QWidget) -> None:
+        label.setObjectName("rowLabel")
+        label.setFixedWidth(_LABEL_WIDTH)
+        grid.addWidget(label, row, 0)
+        grid.addWidget(widget, row, 1)
+
+    def _add_input(self, grid: QGridLayout, row: int, label: str, placeholder: str) -> QLineEdit:
         input_widget = QLineEdit()
         input_widget.setPlaceholderText(placeholder)
-        self._layout.addWidget(QLabel(label), row, 0)
-        self._layout.addWidget(input_widget, row, 1)
+        self._add_row(grid, row, QLabel(label), input_widget)
         return input_widget
 
     def load_selected_profile(self, profile_name: str) -> None:
