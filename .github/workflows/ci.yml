@@ -35,7 +35,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libpulse-mainloop-glib0 libegl1 libxcb-cursor0 libxkbcommon-x11-0 xvfb xauth
+          sudo apt-get install --yes libpulse-mainloop-glib0 libegl1 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-shape0 libxcb-xinerama0 libxkbcommon-x11-0 xvfb xauth
       - run: uv sync --frozen --extra test
       - name: Run tests under Xvfb
         if: runner.os == 'Linux'
@@ -54,7 +56,7 @@ jobs:
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
-      - run: uv sync --frozen --extra dev
+      - run: uv sync --frozen --extra dev --extra test
       - run: uv run --frozen ruff check --output-format=github cracker scripts
       - run: uv run --frozen ruff format --check cracker scripts
       - run: uv run --frozen ty check --output-format=github
