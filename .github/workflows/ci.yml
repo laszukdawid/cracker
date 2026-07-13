@@ -39,7 +39,13 @@ jobs:
       - run: uv sync --frozen --extra test
       - name: Run tests under Xvfb
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum env QT_QPA_PLATFORM=xcb uv run --frozen pytest
+        # TEMPORARY: QT_DEBUG_PLUGINS + multimedia/qpa logging and `-s` (no capture)
+        # to surface the qFatal message behind the SIGABRT. Revert once diagnosed.
+        run: >-
+          xvfb-run --auto-servernum
+          env QT_QPA_PLATFORM=xcb QT_DEBUG_PLUGINS=1
+          QT_LOGGING_RULES="qt.multimedia.*=true;qt.qpa.*=true"
+          uv run --frozen pytest -s
       - name: Run tests
         if: runner.os != 'Linux'
         run: uv run --frozen pytest
@@ -54,7 +60,7 @@ jobs:
       - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: true
-      - run: uv sync --frozen --extra dev
+      - run: uv sync --frozen --extra dev --extra test
       - run: uv run --frozen ruff check --output-format=github cracker scripts
       - run: uv run --frozen ruff format --check cracker scripts
       - run: uv run --frozen ty check --output-format=github
