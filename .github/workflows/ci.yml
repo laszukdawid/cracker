@@ -35,17 +35,13 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libpulse-mainloop-glib0 libegl1 libxcb-cursor0 libxkbcommon-x11-0 xvfb xauth
+          sudo apt-get install --yes libpulse-mainloop-glib0 libegl1 \
+            libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-shape0 libxcb-xinerama0 libxkbcommon-x11-0 xvfb xauth
       - run: uv sync --frozen --extra test
       - name: Run tests under Xvfb
         if: runner.os == 'Linux'
-        # TEMPORARY: QT_DEBUG_PLUGINS + multimedia/qpa logging and `-s` (no capture)
-        # to surface the qFatal message behind the SIGABRT. Revert once diagnosed.
-        run: >-
-          xvfb-run --auto-servernum
-          env QT_QPA_PLATFORM=xcb QT_DEBUG_PLUGINS=1
-          QT_LOGGING_RULES="qt.multimedia.*=true;qt.qpa.*=true"
-          uv run --frozen pytest -s
+        run: xvfb-run --auto-servernum env QT_QPA_PLATFORM=xcb uv run --frozen pytest
       - name: Run tests
         if: runner.os != 'Linux'
         run: uv run --frozen pytest
