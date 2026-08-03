@@ -22,7 +22,7 @@ cracker = "cracker.main:main"
 
 [project.optional-dependencies]
 dev = ["ruff>=0.15.21,<1", "ty>=0.0.58,<0.1"]
-build = ["build>=1.3,<2", "twine>=6.2,<7"]
+build = ["build>=1.3,<2", "twine>=6.2,<8"]
 test = ["pytest>=8.4,<9"]
 
 [tool.setuptools.dynamic]
