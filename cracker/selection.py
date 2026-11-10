@@ -17,10 +17,19 @@ ACCESSIBILITY_HINT = (
 )
 
 
-def _macos_selected_text(should_continue: Callable[[], bool]) -> str:
+CopySender = Callable[[], None]
+
+
+def _macos_selected_text(should_continue: Callable[[], bool], send_copy: CopySender) -> str:
     from cracker import selection_macos
 
-    return selection_macos.get_selected_text(should_continue)
+    return selection_macos.get_selected_text(send_copy, should_continue)
+
+
+def _macos_copy_sender() -> CopySender:
+    from cracker import selection_macos
+
+    return selection_macos.copy_shortcut_sender()
 
 
 def _macos_is_trusted(prompt: bool) -> bool:
@@ -47,7 +56,8 @@ class SelectionReader(QObject):
         self,
         clipboard: QClipboard,
         platform: str = sys.platform,
-        fetch: Callable[[Callable[[], bool]], str] = _macos_selected_text,
+        fetch: Callable[[Callable[[], bool], CopySender], str] = _macos_selected_text,
+        prepare_copy: Callable[[], CopySender] = _macos_copy_sender,
         is_trusted: Callable[[bool], bool] = _macos_is_trusted,
         start_thread: Callable[[Callable[[], None]], None] | None = None,
     ):
@@ -55,6 +65,7 @@ class SelectionReader(QObject):
         self._clipboard = clipboard
         self._platform = platform
         self._fetch = fetch
+        self._prepare_copy = prepare_copy
         self._is_trusted = is_trusted
         # Not a daemon: at exit Python waits for a running fetch, so it can put the clipboard back.
         self._start_thread = start_thread or (lambda target: threading.Thread(target=target).start())
@@ -113,15 +124,17 @@ class SelectionReader(QObject):
         self._request_id += 1
         request_id = self._request_id
         try:
-            self._start_thread(lambda: self._fetch_in_background(request_id))
+            # Here on the main thread: macOS aborts the app if the keyboard layout is read off it.
+            send_copy = self._prepare_copy()
+            self._start_thread(lambda: self._fetch_in_background(request_id, send_copy))
         except Exception:
             self._busy.release()
             raise
 
-    def _fetch_in_background(self, request_id: int) -> None:
+    def _fetch_in_background(self, request_id: int, send_copy: CopySender) -> None:
         text, error = "", ""
         try:
-            text = self._fetch(lambda: request_id == self._request_id and not self._closing)
+            text = self._fetch(lambda: request_id == self._request_id and not self._closing, send_copy)
         except SelectionCancelled:
             request_id = CANCELLED
         except Exception as exc:

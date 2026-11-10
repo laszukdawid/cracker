@@ -77,14 +77,32 @@ def copy_keycode() -> int:
     return ANSI_C_KEYCODE
 
 
-def send_copy_shortcut() -> None:
-    """Press Cmd+C in the frontmost app."""
+def copy_shortcut_sender() -> Callable[[], None]:
+    """A function that presses Cmd+C in the frontmost app, safe to call from any thread.
+
+    Call this on the main thread: reading the keyboard layout anywhere else makes macOS abort the
+    process. A layout that can't be read is reported only if the copy is actually needed.
+    """
+    try:
+        keycode = copy_keycode()
+    except SelectionError as exc:
+        error = exc  # ``exc`` is cleared when the except block ends
+
+        def unavailable() -> None:
+            raise error
+
+        return unavailable
+
     from pynput.keyboard import Controller, Key, KeyCode
 
-    copy_key = KeyCode.from_vk(copy_keycode())
-    controller = Controller()
-    with controller.pressed(Key.cmd):
-        controller.tap(copy_key)
+    copy_key = KeyCode.from_vk(keycode)
+    controller = Controller()  # also reads the layout
+
+    def send() -> None:
+        with controller.pressed(Key.cmd):
+            controller.tap(copy_key)
+
+    return send
 
 
 class SelectionError(Exception):
@@ -134,7 +152,7 @@ def selected_text_from_copy(
     pasteboard: Any,
     string_type: str,
     make_item: Callable[[], Any],
-    send_copy: Callable[[], None] = send_copy_shortcut,
+    send_copy: Callable[[], None],
     before_copy: Callable[[], None] = lambda: None,
     timeout: float = COPY_TIMEOUT_S,
     sleep: Callable[[float], None] = time.sleep,
@@ -174,7 +192,8 @@ def selected_text_from_copy(
     return str(text) if text else ""
 
 
-def get_selected_text(should_continue: Callable[[], bool] = lambda: True) -> str:
+def get_selected_text(send_copy: Callable[[], None], should_continue: Callable[[], bool] = lambda: True) -> str:
+    """Runs off the main thread; ``send_copy`` comes from ``copy_shortcut_sender`` on the main thread."""
     appkit = _framework("AppKit")
     workspace = appkit.NSWorkspace.sharedWorkspace()
     front = workspace.frontmostApplication()
@@ -198,5 +217,6 @@ def get_selected_text(should_continue: Callable[[], bool] = lambda: True) -> str
         pasteboard=appkit.NSPasteboard.generalPasteboard(),
         string_type=appkit.NSPasteboardTypeString,
         make_item=lambda: appkit.NSPasteboardItem.alloc().init(),
+        send_copy=send_copy,
         before_copy=before_copy,
     )

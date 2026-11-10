@@ -1,4 +1,5 @@
 import sys
+import threading
 from unittest.mock import MagicMock
 
 import pytest
@@ -212,8 +213,9 @@ def test_layout_lookup_failure_sends_no_keys(monkeypatch):
     controller = MagicMock()
     monkeypatch.setattr(keyboard, "Controller", lambda: controller)
 
+    send = selection_macos.copy_shortcut_sender()  # an unreadable layout only fails once the copy is needed
     with pytest.raises(selection_macos.SelectionError):
-        selection_macos.send_copy_shortcut()
+        send()
 
     controller.pressed.assert_not_called()
     controller.tap.assert_not_called()
@@ -314,7 +316,7 @@ def test_get_selected_text_prefers_accessibility(monkeypatch):
     copy = MagicMock()
     monkeypatch.setattr(selection_macos, "selected_text_from_copy", copy)
 
-    assert selection_macos.get_selected_text() == "from ax 42"
+    assert selection_macos.get_selected_text(MagicMock()) == "from ax 42"
     copy.assert_not_called()
 
 
@@ -329,7 +331,7 @@ def test_get_selected_text_does_not_copy_after_focus_change(monkeypatch):
     monkeypatch.setattr(selection_macos, "selected_text_from_copy", _copy_that_runs_before_copy)
 
     with pytest.raises(selection_macos.SelectionError):
-        selection_macos.get_selected_text()
+        selection_macos.get_selected_text(MagicMock())
 
 
 def test_get_selected_text_skips_copy_when_cancelled(monkeypatch):
@@ -338,22 +340,32 @@ def test_get_selected_text_skips_copy_when_cancelled(monkeypatch):
     monkeypatch.setattr(selection_macos, "selected_text_from_copy", _copy_that_runs_before_copy)
 
     with pytest.raises(selection_macos.SelectionCancelled):
-        selection_macos.get_selected_text(should_continue=lambda: False)
+        selection_macos.get_selected_text(MagicMock(), should_continue=lambda: False)
 
 
 def test_get_selected_text_copies_when_focus_is_unchanged(monkeypatch):
     monkeypatch.setattr(selection_macos, "_framework", lambda name: _fake_appkit([42, 42]))
     monkeypatch.setattr(selection_macos, "selected_text_from_accessibility", lambda pid: "")
-    monkeypatch.setattr(selection_macos, "selected_text_from_copy", _copy_that_runs_before_copy)
+    seen = {}
+    monkeypatch.setattr(
+        selection_macos, "selected_text_from_copy", lambda **kw: seen.update(kw) or _copy_that_runs_before_copy(**kw)
+    )
+    send_copy = MagicMock()
 
-    assert selection_macos.get_selected_text() == "copied"
+    assert selection_macos.get_selected_text(send_copy) == "copied"
+    assert seen["send_copy"] is send_copy
 
 
-def _reader(platform="darwin", fetch=lambda should_continue: "hello", trusted=True, clipboard=None):
+def _no_copy():
+    return lambda: None
+
+
+def _reader(platform="darwin", fetch=lambda should_continue, send_copy: "hello", trusted=True, clipboard=None):
     reader = SelectionReader(
         clipboard or MagicMock(),
         platform=platform,
         fetch=fetch,
+        prepare_copy=_no_copy,
         is_trusted=lambda prompt: trusted,
         start_thread=lambda target: target(),
     )
@@ -386,7 +398,7 @@ def test_reader_asks_for_accessibility_when_untrusted():
 def test_reader_reports_fetch_errors_and_recovers():
     calls = []
 
-    def fetch(should_continue):
+    def fetch(should_continue, send_copy):
         calls.append(1)
         if len(calls) == 1:
             raise RuntimeError("boom")
@@ -406,7 +418,8 @@ def test_reader_drops_result_cancelled_by_stop():
     reader = SelectionReader(
         MagicMock(),
         platform="darwin",
-        fetch=lambda should_continue: "late text",
+        fetch=lambda should_continue, send_copy: "late text",
+        prepare_copy=_no_copy,
         is_trusted=lambda prompt: True,
         start_thread=pending.append,
     )
@@ -423,11 +436,16 @@ def test_reader_drops_result_cancelled_by_stop():
 def test_reader_reports_errors_even_after_cancel():
     pending = []
 
-    def fetch(should_continue):
+    def fetch(should_continue, send_copy):
         raise selection_macos.SelectionError("couldn't restore the previous clipboard")
 
     reader = SelectionReader(
-        MagicMock(), platform="darwin", fetch=fetch, is_trusted=lambda prompt: True, start_thread=pending.append
+        MagicMock(),
+        platform="darwin",
+        fetch=fetch,
+        prepare_copy=_no_copy,
+        is_trusted=lambda prompt: True,
+        start_thread=pending.append,
     )
     failures = []
     reader.failed.connect(failures.append)
@@ -444,7 +462,8 @@ def test_reader_tells_fetch_to_stop_after_cancel():
     reader = SelectionReader(
         MagicMock(),
         platform="darwin",
-        fetch=lambda should_continue: seen.append(should_continue()) or "",
+        fetch=lambda should_continue, send_copy: seen.append(should_continue()) or "",
+        prepare_copy=_no_copy,
         is_trusted=lambda prompt: True,
         start_thread=pending.append,
     )
@@ -457,7 +476,7 @@ def test_reader_tells_fetch_to_stop_after_cancel():
 
 
 def test_reader_swallows_cancelled_fetch_silently():
-    def fetch(should_continue):
+    def fetch(should_continue, send_copy):
         raise selection_macos.SelectionCancelled()
 
     reader, texts, failures = _reader(fetch=fetch)
@@ -472,7 +491,7 @@ def test_reader_reports_permission_check_errors():
     def broken_check(prompt):
         raise OSError("no AX")
 
-    reader = SelectionReader(MagicMock(), platform="darwin", is_trusted=broken_check)
+    reader = SelectionReader(MagicMock(), platform="darwin", prepare_copy=_no_copy, is_trusted=broken_check)
     failures = []
     reader.failed.connect(failures.append)
 
@@ -485,7 +504,9 @@ def test_reader_reports_thread_start_errors_and_unlocks():
     def no_threads(target):
         raise RuntimeError("can't start thread")
 
-    reader = SelectionReader(MagicMock(), platform="darwin", is_trusted=lambda prompt: True, start_thread=no_threads)
+    reader = SelectionReader(
+        MagicMock(), platform="darwin", prepare_copy=_no_copy, is_trusted=lambda prompt: True, start_thread=no_threads
+    )
     failures = []
     reader.failed.connect(failures.append)
 
@@ -511,7 +532,8 @@ def test_reader_ignores_request_while_busy():
     reader = SelectionReader(
         MagicMock(),
         platform="darwin",
-        fetch=lambda should_continue: "text",
+        fetch=lambda should_continue, send_copy: "text",
+        prepare_copy=_no_copy,
         is_trusted=lambda prompt: True,
         start_thread=pending.append,
     )
@@ -571,7 +593,8 @@ def test_when_idle_waits_for_a_running_fetch_to_finish():
     reader = SelectionReader(
         MagicMock(),
         platform="darwin",
-        fetch=lambda should_continue: calls.append("fetch") or "selected",
+        fetch=lambda should_continue, send_copy: calls.append("fetch") or "selected",
+        prepare_copy=_no_copy,
         is_trusted=lambda prompt: True,
         start_thread=pending.append,
     )
@@ -588,11 +611,16 @@ def test_when_idle_waits_for_a_running_fetch_to_finish():
 def test_when_idle_runs_after_a_cancelled_fetch():
     pending, calls = [], []
 
-    def fetch(should_continue):
+    def fetch(should_continue, send_copy):
         raise selection_macos.SelectionCancelled()
 
     reader = SelectionReader(
-        MagicMock(), platform="darwin", fetch=fetch, is_trusted=lambda prompt: True, start_thread=pending.append
+        MagicMock(),
+        platform="darwin",
+        fetch=fetch,
+        prepare_copy=_no_copy,
+        is_trusted=lambda prompt: True,
+        start_thread=pending.append,
     )
 
     reader.request()
@@ -607,7 +635,8 @@ def test_when_idle_is_dropped_by_a_later_stop():
     reader = SelectionReader(
         MagicMock(),
         platform="darwin",
-        fetch=lambda should_continue: "selected",
+        fetch=lambda should_continue, send_copy: "selected",
+        prepare_copy=_no_copy,
         is_trusted=lambda prompt: True,
         start_thread=pending.append,
     )
@@ -619,3 +648,53 @@ def test_when_idle_is_dropped_by_a_later_stop():
     pending[0]()
 
     assert calls == []
+
+
+def test_reader_prepares_the_copy_key_on_the_calling_thread():
+    calls = []
+    sender = MagicMock()
+    pending = []
+
+    def prepare():
+        calls.append(("prepare", threading.get_ident()))
+        return sender
+
+    def fetch(should_continue, send_copy):
+        calls.append(("fetch", send_copy))
+        return "text"
+
+    reader = SelectionReader(
+        MagicMock(),
+        platform="darwin",
+        fetch=fetch,
+        prepare_copy=prepare,
+        is_trusted=lambda prompt: True,
+        start_thread=pending.append,
+    )
+    reader.request()
+    assert calls == [("prepare", threading.get_ident())]  # before the worker starts
+
+    worker = threading.Thread(target=pending.pop())
+    worker.start()
+    worker.join()
+    assert calls[1] == ("fetch", sender)
+
+
+def test_reader_reports_copy_preparation_errors_and_unlocks():
+    def broken_prepare():
+        raise RuntimeError("no keyboard")
+
+    reader = SelectionReader(
+        MagicMock(),
+        platform="darwin",
+        fetch=MagicMock(),
+        prepare_copy=broken_prepare,
+        is_trusted=lambda prompt: True,
+        start_thread=lambda target: target(),
+    )
+    failures = []
+    reader.failed.connect(failures.append)
+    reader.request()
+
+    assert failures and "no keyboard" in failures[0]
+    assert not reader._busy.locked()
