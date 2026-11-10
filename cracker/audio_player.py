@@ -24,6 +24,7 @@ class AudioPlayer(QMediaPlayer):
     segmentStarted = pyqtSignal(int)
     segmentsAdded = pyqtSignal()
     preparingChanged = pyqtSignal(bool)  # speech for a new read is being synthesised
+    pausedChanged = pyqtSignal(bool)  # the user paused or resumed the read
     _logger = get_logger(__name__)
 
     def __init__(self) -> None:
@@ -74,14 +75,24 @@ class AudioPlayer(QMediaPlayer):
             self._play_next()
 
     def pause(self) -> None:
-        self._user_paused = True
-        super().pause()
+        self._set_paused(True)
+        if not self._waiting:
+            super().pause()
 
     def play(self) -> None:
-        self._user_paused = False
-        if self._waiting:
-            return  # nothing is loaded yet; the next segment starts playing when it arrives
-        super().play()
+        self._set_paused(False)
+        if not self._waiting:  # otherwise the next segment starts playing when it arrives
+            super().play()
+
+    @property
+    def is_paused(self) -> bool:
+        """Paused by the user, including while waiting for the next chunk."""
+        return self._user_paused
+
+    def _set_paused(self, paused: bool) -> None:
+        if paused != self._user_paused:
+            self._user_paused = paused
+            self.pausedChanged.emit(paused)
 
     def set_preparing(self, preparing: bool) -> None:
         if preparing != self._preparing:
@@ -98,7 +109,7 @@ class AudioPlayer(QMediaPlayer):
         self._current_index = -1
         self._more_coming = False
         self._waiting = False
-        self._user_paused = False
+        self._set_paused(False)
         was_reading = self._reading
         self._reading = False
         super().stop()

@@ -301,7 +301,9 @@ def test_estimate_timer_pauses_while_waiting_for_the_next_chunk(qt_app: QApplica
     qt_app.processEvents()
 
 
-def test_read_along_switches_to_marks_when_later_chunks_have_them(qt_app: QApplication, tmp_path: Path, monkeypatch):
+def test_read_along_keeps_the_estimate_when_the_first_chunk_has_no_marks(
+    qt_app: QApplication, tmp_path: Path, monkeypatch
+):
     window, player = _make_main_window(tmp_path, monkeypatch)
     controller = window.read_along
     assert controller is not None
@@ -309,11 +311,14 @@ def test_read_along_switches_to_marks_when_later_chunks_have_them(qt_app: QAppli
     window.textEdit.setPlainText("Hello world again")
 
     player.play_segments([AudioSegment(path=str(tmp_path / "a.mp3"))], more_coming=True)  # marks request failed
+    controller._on_state(QMediaPlayer.PlaybackState.PlayingState)
     assert controller._mode == "estimate"
 
     player.append_segment(AudioSegment(path=str(tmp_path / "b.mp3"), marks=[WordMark(0, "again")]))
 
-    assert controller._mode == "marks" and not controller._timer.isActive()
+    # Mixing estimated and marked chunks would freeze the first and mix up word indices.
+    assert controller._mode == "estimate" and controller._session is not None
+    assert controller._session.total == 3 and controller._timer.isActive()
     window.close()
     player.stop()
     qt_app.processEvents()

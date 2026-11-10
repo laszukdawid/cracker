@@ -66,13 +66,9 @@ class ReadAlongController(QObject):
 
     def _on_segments_added(self) -> None:
         """Later segments bring their own word marks; re-align so they can be highlighted."""
-        if self._session is None:
-            return
-        if self._mode == "estimate" and self._player.has_marks:
-            # The first chunk came without marks (its request failed); use them from here on.
-            self._timer.stop()
-            self._mode = "marks"
-        if self._mode != "marks":
+        # A read that started without marks (the first marks request failed) keeps the estimate:
+        # switching part-way would leave the unmarked chunk without progress and mix word indices.
+        if self._session is None or self._mode != "marks":
             return
         index = self._session.index
         self._session = self._build_session()

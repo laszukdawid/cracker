@@ -194,3 +194,29 @@ def test_polly_shutdown_cancels_and_removes_cached_audio_once(tmp_path, monkeypa
     polly._queue.cancel.assert_called_once()
     polly.player.stop.assert_called_once()
     assert not cached.exists()
+
+
+def test_polly_chunk_keeps_its_audio_when_marks_are_cancelled(tmp_path, monkeypatch):
+    from concurrent.futures import Future
+
+    polly = _polly(tmp_path, monkeypatch)
+    cancelled = Future()
+    cancelled.cancel()
+    pool = MagicMock()
+    pool.submit.return_value = cancelled
+    polly._marks_pool = lambda: pool
+    polly.client.synthesize_speech.return_value = {"AudioStream": MagicMock(read=lambda: b"mp3")}
+
+    segment = polly._synthesize_chunk("tok", 0, "Hi", "medium", "medium", "Joanna")
+
+    assert segment.marks == [] and open(segment.path, "rb").read() == b"mp3"  # returned, so it can be removed
+
+
+def test_google_requests_have_a_deadline():
+    from cracker.speaker.google import REQUEST_TIMEOUT_S
+
+    speaker = object.__new__(Google)
+    speaker.client = MagicMock()
+    speaker.ask_google("hello", MagicMock())
+
+    assert speaker.client.synthesize_speech.call_args.kwargs["timeout"] == REQUEST_TIMEOUT_S

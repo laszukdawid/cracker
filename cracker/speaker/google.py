@@ -12,6 +12,8 @@ from cracker.utils import get_logger
 
 from .abstract_speaker import AbstractSpeaker
 
+REQUEST_TIMEOUT_S = 20
+
 
 class Google(AbstractSpeaker):
     _logger = get_logger(__name__)
@@ -107,7 +109,10 @@ class Google(AbstractSpeaker):
 
         audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
         synth_speech = texttospeech.SynthesisInput(text=text)
-        response = self.client.synthesize_speech(input=synth_speech, voice=voice, audio_config=audio_config)
+        # The client sets no deadline by default, and quitting waits for requests in flight.
+        response = self.client.synthesize_speech(
+            input=synth_speech, voice=voice, audio_config=audio_config, timeout=REQUEST_TIMEOUT_S
+        )
         return response
 
     def play_files(self, filepaths):

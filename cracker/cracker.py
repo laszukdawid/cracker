@@ -185,7 +185,7 @@ class Cracker(object):
         self._last_pid = self.speaker.read_text(text, **speaker_config)
 
     def toggle_read(self):
-        if self.player.playbackState() == QMediaPlayer.PlaybackState.PausedState:
+        if self.player.is_paused:
             self.player.play()
         else:
             self.player.pause()

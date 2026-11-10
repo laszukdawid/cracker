@@ -278,3 +278,40 @@ def test_pause_during_a_synthesis_gap_holds_the_next_segment(player: AudioPlayer
 
     player.play()  # Resume
     assert player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
+
+
+def test_pause_resume_pause_during_a_gap_ends_paused(player: AudioPlayer, tmp_path: Path):
+    paused = QSignalSpy(player.pausedChanged)
+    player.audio_output.setMuted(True)
+    player.play_segments([_silence(tmp_path / "a.wav")], more_coming=True)
+    _wait_for(player, lambda: player.waiting_for_segment)
+
+    player.pause()
+    player.play()
+    player.pause()
+    assert player.is_paused and [event[0] for event in paused] == [True, False, True]
+
+    player.append_segment(_silence(tmp_path / "b.wav"))
+    _wait_for(player, lambda: False, timeout_ms=200)
+    assert player.playbackState() == QMediaPlayer.PlaybackState.PausedState
+
+
+def test_job_removes_submitted_files_when_submitting_fails_at_exit(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from cracker.speaker import synthesis
+
+    class ShuttingDown(ThreadPoolExecutor):
+        submitted = 0
+
+        def submit(self, *args, **kwargs):
+            if ShuttingDown.submitted == 1:
+                raise RuntimeError("cannot schedule new futures after interpreter shutdown")
+            ShuttingDown.submitted += 1
+            return super().submit(*args, **kwargs)
+
+    monkeypatch.setattr(synthesis, "ThreadPoolExecutor", ShuttingDown)
+    job = SynthesisJob(["a", "b", "c"], _writer(tmp_path))
+    _run_sync(job)
+
+    assert job.cancelled and list(tmp_path.iterdir()) == []

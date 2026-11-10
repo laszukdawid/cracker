@@ -177,3 +177,14 @@ def test_closing_the_app_shuts_the_speaker_down():
     cracker._close()
 
     cracker.speaker.shutdown.assert_called_once()
+
+
+def test_pause_toggle_follows_the_players_pause_state():
+    cracker = _cracker()
+    cracker.player.is_paused = True
+    cracker.toggle_read()
+    cracker.player.play.assert_called_once()
+
+    cracker.player.is_paused = False
+    cracker.toggle_read()
+    cracker.player.pause.assert_called_once()

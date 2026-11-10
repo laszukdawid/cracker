@@ -1,7 +1,7 @@
 import os
 import threading
 import uuid
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import CancelledError, ThreadPoolExecutor
 from typing import List
 
 import boto3
@@ -28,9 +28,9 @@ CONNECTION_HELP = (
 )
 
 
-# botocore waits 60 s by default; a dead connection would hold up Stop and quitting that long.
-# A 3,000-character synthesis takes about 1.3 s.
-CLIENT_CONFIG = Config(connect_timeout=5, read_timeout=20, retries={"max_attempts": 3, "mode": "standard"})
+# botocore defaults to 60 s timeouts and 4 attempts. Quitting waits for requests in flight, so keep
+# them short: a 3,000-character synthesis takes about 1.3 s. Worst case here is 2 x (5 + 15) s.
+CLIENT_CONFIG = Config(connect_timeout=5, read_timeout=15, retries={"total_max_attempts": 2, "mode": "standard"})
 
 
 class Polly(AbstractSpeaker):
@@ -244,7 +244,11 @@ class Polly(AbstractSpeaker):
         response = self.ask_polly(parted_ssml, voice)
         filename = create_filename(f"polly-{token}.mp3", index)
         saved_filepath = save_mp3(response["AudioStream"].read(), filename)
-        return AudioSegment(path=saved_filepath, marks=marks.result())
+        try:
+            word_marks = marks.result()
+        except CancelledError:  # shutting down; return the segment so its file is removed
+            word_marks = []
+        return AudioSegment(path=saved_filepath, marks=word_marks)
 
     def _marks_pool(self) -> ThreadPoolExecutor:
         if self._marks_executor is None:

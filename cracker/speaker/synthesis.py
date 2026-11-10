@@ -71,11 +71,14 @@ class SynthesisJob(QObject):
         if self.cancelled:
             return
         done: list[AudioSegment] = []
+        futures: list[Future[AudioSegment | None]] = []
         with ThreadPoolExecutor(max_workers=self._max_workers, thread_name_prefix="synthesis") as pool:
-            futures: list[Future[AudioSegment | None]] = [
-                pool.submit(self._synthesize_unless_cancelled, index, chunk) for index, chunk in enumerate(self._chunks)
-            ]
             try:
+                for index, chunk in enumerate(self._chunks):
+                    if self.cancelled:
+                        break
+                    # Raises at interpreter exit; the finally below still collects what was submitted.
+                    futures.append(pool.submit(self._synthesize_unless_cancelled, index, chunk))
                 for index, future in enumerate(futures):
                     segment = future.result()
                     if segment is None:  # skipped after cancel
@@ -83,7 +86,7 @@ class SynthesisJob(QObject):
                     done.append(segment)
                     if self.cancelled:
                         break
-                    self.segmentReady.emit(segment, index < len(futures) - 1)
+                    self.segmentReady.emit(segment, index < len(self._chunks) - 1)
             except Exception as error:
                 self._logger.exception("Speech synthesis failed")
                 if not self.cancelled:

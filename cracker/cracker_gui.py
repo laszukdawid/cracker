@@ -1,6 +1,5 @@
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QCloseEvent, QColor, QIcon, QTextCharFormat, QTextCursor
-from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -124,7 +123,7 @@ class MainWindow(QMainWindow):
         self.player.readStarted.connect(self._on_read_started)
         self.player.readFinished.connect(self._on_read_finished)
         self.player.preparingChanged.connect(self._on_preparing)
-        self.player.playbackStateChanged.connect(self._on_playback_state)
+        self.player.pausedChanged.connect(self._on_paused)
 
         self.reduce_action = QAction("Reduce", self)
         self.reduce_action.setStatusTip("Reduces unnecessary text")
@@ -183,7 +182,7 @@ class MainWindow(QMainWindow):
         self.read_button.setIcon(self._icons["read"])
         self.stop_button.setIcon(self._icons["stop"])
         self.config_button.setIcon(self._icons["sliders"])
-        paused = self.player is not None and self.player.playbackState() == QMediaPlayer.PlaybackState.PausedState
+        paused = self.player is not None and self.player.is_paused
         self.pause_button.setIcon(self._icons["play"] if paused else self._icons["pause"])
 
     # --- Widget construction ---------------------------------------------
@@ -484,17 +483,12 @@ class MainWindow(QMainWindow):
             self._set_playback_buttons(playing=False)
             self.set_read_status(reading=False)
 
-    def _on_playback_state(self, state) -> None:
+    def _on_paused(self, paused: bool) -> None:
         # Only the pause/resume affordance changes here; start/stop are handled
         # via readStarted/readFinished (Stopped flickers between segments).
-        if state == QMediaPlayer.PlaybackState.PausedState:
-            self.toggle_action.setText("Resume")
-            if hasattr(self, "pause_button"):
-                self.pause_button.setIcon(self._icons["play"])
-        elif state == QMediaPlayer.PlaybackState.PlayingState:
-            self.toggle_action.setText("Pause")
-            if hasattr(self, "pause_button"):
-                self.pause_button.setIcon(self._icons["pause"])
+        self.toggle_action.setText("Resume" if paused else "Pause")
+        if hasattr(self, "pause_button"):
+            self.pause_button.setIcon(self._icons["play"] if paused else self._icons["pause"])
 
     def _set_playback_buttons(self, playing: bool, paused: bool = False) -> None:
         active = playing or paused
