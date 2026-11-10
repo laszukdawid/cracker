@@ -107,7 +107,7 @@ def tokens_for(theme: str | None) -> ThemeTokens:
 def active_theme_name() -> str:
     """Best-effort detection of the current OS colour scheme.
 
-    Prefers Qt's own ``colorScheme`` (Qt 6.5+); falls back to ``darkdetect``.
+    Uses Qt's own ``colorScheme``, which follows macOS and the freedesktop appearance setting.
     """
     if QApplication.instance() is not None:
         try:
@@ -119,12 +119,7 @@ def active_theme_name() -> str:
                 return "light"
         except Exception:
             pass
-    try:
-        import darkdetect
-
-        return (darkdetect.theme() or "light").lower()
-    except Exception:
-        return "light"
+    return "light"
 
 
 def active_tokens() -> ThemeTokens:

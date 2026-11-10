@@ -3,39 +3,32 @@ import argparse
 import importlib.resources
 import logging
 import sys
-import threading
 
-import darkdetect
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QGuiApplication, QIcon
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
-from cracker.themes import apply_theme
+from cracker.themes import active_theme_name, apply_theme
 from cracker.utils import LoggerConfig
 
 
-class ThemeBridge(QObject):
-    """Marshals OS colour-scheme changes onto the GUI thread.
+class ThemeFollower:
+    """Re-applies Cracker's palette and icons when the OS switches between light and dark.
 
-    ``darkdetect.listener`` emits ``theme_changed`` from a background thread;
-    because the slot is a bound method of this main-thread QObject, a cross-thread
-    emit is delivered via a queued connection, so palette/stylesheet/icon updates
-    always run on the GUI thread.
+    Qt reports the change itself (``QStyleHints.colorSchemeChanged``) on the GUI thread.
     """
 
-    theme_changed = pyqtSignal(object)
-
-    def __init__(self, app):
-        super().__init__()
+    def __init__(self, app: QApplication):
         self._app = app
         self._gui = None
-        self.theme_changed.connect(self._apply_theme_change)
+        hints = QGuiApplication.styleHints()
+        if hints is not None:
+            hints.colorSchemeChanged.connect(self._apply_theme_change)
 
     def set_gui(self, gui):
         self._gui = gui
 
-    def _apply_theme_change(self, theme):
-        apply_theme(self._app, theme)
+    def _apply_theme_change(self, _scheme=None):
+        apply_theme(self._app, active_theme_name())
         if self._gui is not None:
             self._gui.refresh_theme_icons()
 
@@ -61,17 +54,14 @@ def main(argv=None):
     # Force the style to be the same on all OSs:
     app.setStyle("Fusion")
 
-    apply_theme(app, darkdetect.theme())
-    theme_bridge = ThemeBridge(app)
-    listener_thread = threading.Thread(target=darkdetect.listener, args=(theme_bridge.theme_changed.emit,))
-    listener_thread.daemon = True
-    listener_thread.start()
+    apply_theme(app, active_theme_name())
+    theme_follower = ThemeFollower(app)
 
     cracker = Cracker(app)
     cracker.run()
 
     # apply_theme swaps the stylesheet; painted QIcons also need rebuilding.
-    theme_bridge.set_gui(cracker.gui)
+    theme_follower.set_gui(cracker.gui)
 
     icon_path = importlib.resources.files("cracker").joinpath("icon.png")
     icon = QIcon(str(icon_path))
