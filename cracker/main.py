@@ -47,12 +47,13 @@ def parse_args(argv=None):
 
 
 def main(argv=None):
-    from cracker.cracker import Cracker
-
     args, qt_args = parse_args(argv)
     logger_config = LoggerConfig()
     if args.debug:
         logger_config.level = logging.DEBUG
+
+    # Imported after the level is set: module loggers take it when they're created.
+    from cracker.cracker import Cracker
 
     app = QApplication([sys.argv[0], *qt_args])
     app.setApplicationName("Cracker")
