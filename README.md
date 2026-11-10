@@ -80,11 +80,11 @@ Cracker writes the standard AWS shared configuration and starts `aws sso login`;
 
 Cloud backends download audio to Cracker's cache and play it through Qt Multimedia.
 
-Suggested execution command
+Start it with the `cracker` command after `pip install cracker`, or from a checkout:
 
-```bash
-$ cd cracker
-$ python -m cracker.main
+```shell
+make run        # same as: uv run cracker
+uv run cracker --debug
 ```
 
 ## Key shortcuts
@@ -92,16 +92,26 @@ $ python -m cracker.main
 Two commands are global and work while another app is in front; the rest need Cracker in focus.
 Pressing a global shortcut while Cracker is reading stops it.
 
-| Action               | Shortcut            | Global |
-|----------------------|---------------------|--------|
-| Read (clipboard)     | Ctr + Shift + Space | Yes    |
-| Read (selected text) | F6                  | Yes    |
-| Read (text area)     | Ctr + Shift + R     | No     |
-| Pause / Resume read  | Ctr + Space         | No     |
-| Stop reading         | Ctr + Shift + S     | No     |
-| Reduce (all active)  | Ctr + R             | No     |
-| Reduce (wiki)        | Ctr + Shift + W     | No     |
-| Reduce (citation)    | Ctr + Shift + C     | No     |
+On macOS, Qt turns the in-window <kbd>Ctrl</kbd> shortcuts into <kbd>⌘</kbd>. The global shortcuts are read
+from the keyboard directly, so they use the real <kbd>Ctrl</kbd> (<kbd>⌃</kbd>) key on every platform.
+
+| Action                 | Windows / Linux      | macOS        | Global |
+|------------------------|----------------------|--------------|--------|
+| Read clipboard         | Ctrl + Shift + Space | ⌃ ⇧ Space    | Yes    |
+| Read selected text     | F6                   | F6 (fn + F6) | Yes    |
+| Read text area         | Ctrl + R             | ⌘ R          | No     |
+| Read clipboard         | Ctrl + Shift + R     | ⌘ ⇧ R        | No     |
+| Pause / resume         | Ctrl + Space         | ⌘ Space ¹    | No     |
+| Stop                   | Ctrl + Shift + S     | ⌘ ⇧ S        | No     |
+| Reduce wiki citations  | Ctrl + Shift + W     | ⌘ ⇧ W        | No     |
+| Reduce citations       | Ctrl + Shift + C     | ⌘ ⇧ C        | No     |
+| Save config            | Ctrl + S             | ⌘ S          | No     |
+| Quit                   | Ctrl + Q             | ⌘ Q          | No     |
+
+¹ ⌘ Space opens Spotlight by default, so on macOS use the pause button unless that shortcut is changed in
+System Settings → Keyboard → Keyboard Shortcuts → Spotlight.
+
+"Reduce" (all active rules) is in the toolbar and menu and has no shortcut.
 
 The global shortcuts can be changed in `~/.config/cracker/settings.yaml` using
 [pynput key names](https://pynput.readthedocs.io/en/latest/keyboard.html#pynput.keyboard.Key):
