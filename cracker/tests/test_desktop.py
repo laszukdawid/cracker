@@ -442,3 +442,59 @@ def test_modified_selection_key_keeps_first_decision_through_repeats(listener):
     assert intercept(Quartz.kCGEventKeyDown, combo_down) is None
     assert intercept(Quartz.kCGEventKeyDown, key_event(True, repeat=True)) is None
     assert intercept(Quartz.kCGEventKeyUp, key_event(False)) is None
+
+
+def test_settings_are_not_saved_while_the_window_fills_in(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    saves = []
+    monkeypatch.setattr(Configuration, "save_user_config", lambda self, *a, **k: saves.append(1))
+
+    window, player = _make_main_window(tmp_path, monkeypatch)
+
+    assert saves == []
+    assert not window._save_timer.isActive()
+    window.close()
+    player.stop()
+
+
+def test_settings_changes_are_saved_once_after_they_settle(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+    saves = []
+    monkeypatch.setattr(window.config, "save_user_config", lambda *a, **k: saves.append(1))
+
+    for volume in (10, 20, 30, 40):
+        window.change_volume(volume)
+    assert saves == []  # still settling
+
+    spy = QSignalSpy(window._save_timer.timeout)
+    assert spy.wait(2000)
+    assert saves == [1]
+
+    window.close()
+    player.stop()
+
+
+def test_pending_settings_are_saved_on_close(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+    saves = []
+    monkeypatch.setattr(window.config, "save_user_config", lambda *a, **k: saves.append(1))
+
+    window.change_speed(2)
+    window.close()
+
+    assert saves == [1]
+    assert not window._save_timer.isActive()
+    player.stop()
+
+
+def test_save_action_writes_immediately(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+    saves = []
+    monkeypatch.setattr(window.config, "save_user_config", lambda *a, **k: saves.append(1))
+
+    window.change_speed(2)
+    window.save_config()  # Ctrl+S
+
+    assert saves == [1]
+    assert not window._save_timer.isActive()
+    window.close()
+    player.stop()

@@ -1,7 +1,8 @@
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction, QCloseEvent, QColor, QIcon, QTextCharFormat, QTextCursor
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import (
+    QApplication,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -32,6 +33,9 @@ SpeakersType = dict[str, type[AbstractSpeaker]]
 # highlight when the speaker exposes no word marks.
 READ_WPM = [110, 140, 170, 200, 230]
 
+# Settings changes are written once they settle, not on every slider step.
+SAVE_DELAY_MS = 500
+
 
 class MainWindow(QMainWindow):
     """Main GUI for text-to-speech, laid out as a compact command bar.
@@ -61,10 +65,24 @@ class MainWindow(QMainWindow):
         self._icons: dict[str, QIcon] = {}
         self._prev_read_only = False
 
+        self._loading = False
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)
+        self._save_timer.setInterval(SAVE_DELAY_MS)
+        self._save_timer.timeout.connect(self.save_config)
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self.flush_pending_save)
+
     def init(self):
-        self.set_action()
-        self.set_widgets()
-        self.init_values()
+        # Filling the widgets from the config fires their change handlers; that isn't a user change.
+        self._loading = True
+        try:
+            self.set_action()
+            self.set_widgets()
+            self.init_values()
+        finally:
+            self._loading = False
         self.config_window.init()
         assert self.player is not None, "Player must be set before init"
         self.read_along = ReadAlongController(self, self.player)
@@ -481,6 +499,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, a0: QCloseEvent | None) -> None:
         """Triggers CloseEvent and handles closing gracefully"""
+        self.flush_pending_save()
         self.closeAppEvent.emit()
         if hasattr(self, "speaker"):
             del self.speaker
@@ -491,8 +510,18 @@ class MainWindow(QMainWindow):
         self.close()
 
     def save_config(self):
+        self._save_timer.stop()
         self._logger.debug("Saving user config")
         self.config.save_user_config()
+
+    def flush_pending_save(self):
+        if self._save_timer.isActive():
+            self.save_config()
+
+    def schedule_save(self):
+        """Save once changes stop for SAVE_DELAY_MS; ignored while the window fills itself in."""
+        if not self._loading:
+            self._save_timer.start()
 
     def change_speaker(self, speaker_name: str, speaker: AbstractSpeaker):
         """Action on changing speaker.
@@ -513,13 +542,13 @@ class MainWindow(QMainWindow):
         discrete_vol = int(volume * len(self.speaker.VOLUMES) / 100)
         discrete_vol = min(discrete_vol, len(self.speaker.VOLUMES) - 1)
         self.volume = self.speaker.VOLUMES[discrete_vol]
-        self.save_config()
+        self.schedule_save()
 
     def change_speed(self, speed):
         assert self.speaker, "Speaker doesn't exist. Can't change speed."
         self.config.speed = speed
         self.rate = self.speaker.RATES[speed - 1]
-        self.save_config()
+        self.schedule_save()
 
     def change_language(self, language):
         self.config.language = language
@@ -527,8 +556,8 @@ class MainWindow(QMainWindow):
         self.voiceW.clear()
         self.voiceW.addItems(voices)
         self.change_voice(voices[0])
-        self.save_config()
+        self.schedule_save()
 
     def change_voice(self, voice):
         self.config.voice = voice
-        self.save_config()
+        self.schedule_save()
