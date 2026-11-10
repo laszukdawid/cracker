@@ -195,6 +195,8 @@ class Cracker(object):
 
         Important: Each speaker has its own configuration. These values should be updated on change.
         """
+        # Creating a speaker reloads the shared config from disk, which would drop an unsaved change.
+        self.gui.flush_pending_save()
         self.speaker = self.get_speaker(speaker_name, self.player)
         self.gui.change_speaker(speaker_name, self.speaker)
 

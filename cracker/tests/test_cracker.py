@@ -41,6 +41,18 @@ def test_change_speaker_reuses_one_backend_in_gui():
     assert cracker.speaker is speaker
 
 
+def test_change_speaker_saves_pending_settings_before_reloading_config():
+    cracker = object.__new__(Cracker)
+    cracker.player = MagicMock()
+    calls = MagicMock()
+    cracker.gui = calls.gui
+    cracker.get_speaker = calls.get_speaker
+
+    cracker.change_speaker("google")
+
+    assert [c[0] for c in calls.mock_calls[:2]] == ["gui.flush_pending_save", "get_speaker"]
+
+
 def test_set_action_starts_both_global_shortcuts():
     cracker = _cracker()
 

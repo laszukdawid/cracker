@@ -1,6 +1,7 @@
 import importlib
 import sys
 import wave
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -20,7 +21,7 @@ from cracker.read_along import AudioSegment, WordMark
 from cracker.speaker.polly import Polly
 
 
-def _make_main_window(tmp_path: Path, monkeypatch):
+def _make_main_window(tmp_path: Path, monkeypatch, mock_saves: bool = True):
     monkeypatch.setattr(Configuration, "USER_CONFIG_DIR_PATH", str(tmp_path / "config"))
     monkeypatch.setattr("cracker.view.speaker_config_tab.list_aws_profiles", lambda: [])
     monkeypatch.setattr("cracker.view.speaker_config_tab.load_sso_profile", lambda _profile: None)
@@ -30,7 +31,7 @@ def _make_main_window(tmp_path: Path, monkeypatch):
     speaker.VOLUMES = list(range(100))
     speaker.RATES = [80, 120, 160, 200, 240]
     player = AudioPlayer()
-    with patch.object(config, "save_user_config"):
+    with patch.object(config, "save_user_config") if mock_saves else nullcontext():
         window = MainWindow(config, speakers={"polly": Polly})
         window.speaker = speaker
         window.player = player
@@ -448,7 +449,7 @@ def test_settings_are_not_saved_while_the_window_fills_in(qt_app: QApplication, 
     saves = []
     monkeypatch.setattr(Configuration, "save_user_config", lambda self, *a, **k: saves.append(1))
 
-    window, player = _make_main_window(tmp_path, monkeypatch)
+    window, player = _make_main_window(tmp_path, monkeypatch, mock_saves=False)
 
     assert saves == []
     assert not window._save_timer.isActive()
