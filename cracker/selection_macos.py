@@ -49,16 +49,17 @@ CMD_MODIFIER_STATE = 0x0100 >> 8  # Carbon cmdKey, in UCKeyTranslate's modifier-
 
 def copy_keycode() -> int:
     """The key that gives "c" while Cmd is held; layouts such as "Dvorak - QWERTY ⌘" switch keys under Cmd."""
-    try:
-        from pynput._util.darwin import keycode_context, keycode_to_string
+    from pynput._util.darwin import keycode_context, keycode_to_string
 
+    try:
         with keycode_context() as context:
             for vk in [ANSI_C_KEYCODE, *range(128)]:
                 if keycode_to_string(context, vk, CMD_MODIFIER_STATE).lower() == "c":
                     return vk
-    except Exception:
-        pass
-    # Non-Latin layouts have no "c"; macOS maps Cmd shortcuts to the ANSI key there.
+    except Exception as exc:
+        # Guessing could send another shortcut (Cmd+J on Dvorak), so don't press anything.
+        raise SelectionError(f"couldn't work out the copy key for this keyboard layout ({exc})") from exc
+    # The layout was read but has no "c" (e.g. Cyrillic); macOS maps Cmd shortcuts to the ANSI key there.
     return ANSI_C_KEYCODE
 
 
@@ -66,9 +67,10 @@ def send_copy_shortcut() -> None:
     """Press Cmd+C in the frontmost app."""
     from pynput.keyboard import Controller, Key, KeyCode
 
+    copy_key = KeyCode.from_vk(copy_keycode())
     controller = Controller()
     with controller.pressed(Key.cmd):
-        controller.tap(KeyCode.from_vk(copy_keycode()))
+        controller.tap(copy_key)
 
 
 class SelectionError(Exception):

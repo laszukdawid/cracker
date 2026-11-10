@@ -61,7 +61,7 @@ class SelectionReader(QObject):
         self._busy = threading.Lock()
         self._request_id = 0
         self._closing = False
-        self._when_idle: list[Callable[[], None]] = []
+        self._when_idle: list[tuple[int, Callable[[], None]]] = []
         self._fetched.connect(self._deliver)
 
     def request(self) -> None:
@@ -82,9 +82,12 @@ class SelectionReader(QObject):
         self._request_id += 1
 
     def when_idle(self, callback: Callable[[], None]) -> None:
-        """Run ``callback`` now, or once a running fetch has put the clipboard back."""
+        """Run ``callback`` now, or once a running fetch has put the clipboard back.
+
+        A later ``cancel()`` (a Stop or a newer read) or ``request()`` drops the queued callback.
+        """
         if self._busy.locked():
-            self._when_idle.append(callback)
+            self._when_idle.append((self._request_id, callback))
         else:
             callback()
 
@@ -138,6 +141,7 @@ class SelectionReader(QObject):
             self.textReady.emit(text)
         # A new fetch may have started before this queued call ran; its completion runs these instead.
         if not self._busy.locked():
-            callbacks, self._when_idle = self._when_idle, []
-            for callback in callbacks:
-                callback()
+            queued, self._when_idle = self._when_idle, []
+            for queued_id, callback in queued:
+                if queued_id == self._request_id and not self._closing:
+                    callback()

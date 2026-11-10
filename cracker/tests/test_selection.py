@@ -185,6 +185,25 @@ def test_copy_keycode_uses_the_command_layout(monkeypatch, cmd_layout, expected)
     assert selection_macos.copy_keycode() == expected
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="pynput macOS layout helpers")
+def test_layout_lookup_failure_sends_no_keys(monkeypatch):
+    from pynput import keyboard
+    from pynput._util import darwin
+
+    def broken_context():
+        raise OSError("no layout data")
+
+    monkeypatch.setattr(darwin, "keycode_context", broken_context)
+    controller = MagicMock()
+    monkeypatch.setattr(keyboard, "Controller", lambda: controller)
+
+    with pytest.raises(selection_macos.SelectionError):
+        selection_macos.send_copy_shortcut()
+
+    controller.pressed.assert_not_called()
+    controller.tap.assert_not_called()
+
+
 def test_unbuildable_backup_aborts_before_copy():
     class BrokenItem(FakeItem):
         def setData_forType_(self, data, pb_type):
@@ -566,3 +585,22 @@ def test_when_idle_runs_after_a_cancelled_fetch():
     pending[0]()
 
     assert calls == ["read clipboard"]
+
+
+def test_when_idle_is_dropped_by_a_later_stop():
+    pending, calls = [], []
+    reader = SelectionReader(
+        MagicMock(),
+        platform="darwin",
+        fetch=lambda should_continue: "selected",
+        is_trusted=lambda prompt: True,
+        start_thread=pending.append,
+    )
+
+    reader.request()
+    reader.cancel()
+    reader.when_idle(lambda: calls.append("read clipboard"))
+    reader.cancel()  # Stop, or a newer read, after the clipboard read was queued
+    pending[0]()
+
+    assert calls == []

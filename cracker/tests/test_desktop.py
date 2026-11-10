@@ -379,6 +379,18 @@ def test_holding_modifiers_fires_each_press_once(listener):
 
 
 @patch("cracker.keylogger.keyboard.Listener")
+def test_releasing_another_key_while_f6_is_held_does_not_fire(listener):
+    manager, _, selection = _started_manager(listener)
+
+    manager.on_press(keyboard.Key.f6)
+    manager.on_press(keyboard.Key.shift)
+    manager.on_release(keyboard.Key.shift)
+    manager.on_release(keyboard.Key.f6)
+
+    assert selection == [True]
+
+
+@patch("cracker.keylogger.keyboard.Listener")
 def test_selection_shortcut_emits_on_f6(listener):
     manager, clipboard, selection = _started_manager(listener)
 

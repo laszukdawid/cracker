@@ -79,7 +79,9 @@ class KeyBoardManager(QObject):
 
     def on_release(self, key):
         for hotkey, signal in self._hotkeys:
-            if hotkey <= self._pressed:
+            # Only a release of one of the shortcut's own keys fires it, so releasing Shift while F6 is
+            # held doesn't, and the key leaves ``_pressed`` below so it can't fire twice.
+            if key in hotkey and hotkey <= self._pressed:
                 signal.emit()
                 break
         # Only the released key: modifiers still held may belong to the next shortcut.
