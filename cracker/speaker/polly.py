@@ -1,4 +1,3 @@
-import logging
 import os
 from typing import List
 
@@ -60,7 +59,7 @@ class Polly(AbstractSpeaker):
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
             return session.client("polly")
         except Exception as e:
-            logging.exception(
+            Polly._logger.exception(
                 "Unable to connect to AWS with the profile '%s' and region '%s'. "
                 "Please verify that configuration file exists.",
                 profile_name,

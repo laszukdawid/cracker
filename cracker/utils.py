@@ -2,13 +2,17 @@ import logging
 from collections.abc import MutableMapping
 from typing import Dict
 
+# A module logger, not logging.debug(): the root-level helpers install a root handler on first use,
+# which then prints every cracker log line a second time.
+_logger = logging.getLogger(__name__)
+
 
 class Singleton(object):
     _instances = {}
 
     def __new__(cls, *args, **kwargs):
         if cls not in cls._instances:
-            logging.debug(f"Creating new instance of '{cls}'")
+            _logger.debug("Creating new instance of '%s'", cls)
             cls._instances[cls] = super(Singleton, cls).__new__(cls, *args, **kwargs)
         return cls._instances[cls]
 
@@ -30,12 +34,15 @@ def get_logger(name: str) -> logging.Logger:
     logger_config = LoggerConfig()
     logger = logging.getLogger(name)
     logger.setLevel(logger_config.level)
+    # Each logger prints through its own handler; propagating would print again via any root handler.
+    logger.propagate = False
 
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler = logging.StreamHandler()
-    handler.setLevel(logger_config.level)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not logger.handlers:
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        handler = logging.StreamHandler()
+        handler.setLevel(logger_config.level)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
     return logger
 
 
