@@ -48,17 +48,31 @@ CMD_MODIFIER_STATE = 0x0100 >> 8  # Carbon cmdKey, in UCKeyTranslate's modifier-
 
 
 def copy_keycode() -> int:
-    """The key that gives "c" while Cmd is held; layouts such as "Dvorak - QWERTY ⌘" switch keys under Cmd."""
+    """The key that gives "c" while Cmd is held; layouts such as "Dvorak - QWERTY ⌘" switch keys under Cmd.
+
+    Raises rather than guessing when the layout can't be read: a wrong key could send another
+    shortcut (Cmd+J on Dvorak).
+    """
     from pynput._util.darwin import keycode_context, keycode_to_string
 
+    unreadable = "couldn't work out the copy key for this keyboard layout"
     try:
         with keycode_context() as context:
-            for vk in [ANSI_C_KEYCODE, *range(128)]:
-                if keycode_to_string(context, vk, CMD_MODIFIER_STATE).lower() == "c":
-                    return vk
+            if not context or context[1] is None:
+                raise SelectionError(unreadable)
+            translated = {vk: keycode_to_string(context, vk, CMD_MODIFIER_STATE).lower() for vk in range(128)}
+    except SelectionError:
+        raise
     except Exception as exc:
-        # Guessing could send another shortcut (Cmd+J on Dvorak), so don't press anything.
-        raise SelectionError(f"couldn't work out the copy key for this keyboard layout ({exc})") from exc
+        raise SelectionError(f"{unreadable} ({exc})") from exc
+    # pynput ignores UCKeyTranslate's status, so a failed translation looks like an empty string.
+    if not any(translated.values()):
+        raise SelectionError(unreadable)
+    if translated[ANSI_C_KEYCODE] == "c":
+        return ANSI_C_KEYCODE
+    for vk, char in translated.items():
+        if char == "c":
+            return vk
     # The layout was read but has no "c" (e.g. Cyrillic); macOS maps Cmd shortcuts to the ANSI key there.
     return ANSI_C_KEYCODE
 

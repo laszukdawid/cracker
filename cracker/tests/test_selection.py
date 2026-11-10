@@ -174,7 +174,7 @@ def test_copy_keycode_uses_the_command_layout(monkeypatch, cmd_layout, expected)
 
     from pynput._util import darwin
 
-    monkeypatch.setattr(darwin, "keycode_context", lambda: contextlib.nullcontext(None))
+    monkeypatch.setattr(darwin, "keycode_context", lambda: contextlib.nullcontext((40, b"layout")))
 
     def keycode_to_string(context, vk, modifier_state=0):
         assert modifier_state == selection_macos.CMD_MODIFIER_STATE
@@ -183,6 +183,21 @@ def test_copy_keycode_uses_the_command_layout(monkeypatch, cmd_layout, expected)
     monkeypatch.setattr(darwin, "keycode_to_string", keycode_to_string)
 
     assert selection_macos.copy_keycode() == expected
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="pynput macOS layout helpers")
+@pytest.mark.parametrize("context", [None, (40, None), (40, b"layout")])
+def test_unreadable_layout_raises_instead_of_guessing(monkeypatch, context):
+    import contextlib
+
+    from pynput._util import darwin
+
+    monkeypatch.setattr(darwin, "keycode_context", lambda: contextlib.nullcontext(context))
+    # UCKeyTranslate failing: pynput ignores its status and returns "".
+    monkeypatch.setattr(darwin, "keycode_to_string", lambda context, vk, modifier_state=0: "")
+
+    with pytest.raises(selection_macos.SelectionError):
+        selection_macos.copy_keycode()
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="pynput macOS layout helpers")
