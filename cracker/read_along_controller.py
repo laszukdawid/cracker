@@ -55,8 +55,11 @@ class ReadAlongController(QObject):
         self._pending_text = text
 
     def _on_started(self) -> None:
+        # The first segment decides, for streamed and cached reads alike: if its marks request failed,
+        # the whole read uses the estimate rather than leaving that segment without progress.
+        marks = self._player.segment_marks()
+        self._mode = "marks" if marks and marks[0] else "estimate"
         self._session = self._build_session()
-        self._mode = "marks" if self._player.has_marks else "estimate"
         self._elapsed = 0.0
         self._view.set_reading_readonly(True)
         self._view.set_read_progress(0)
@@ -66,8 +69,7 @@ class ReadAlongController(QObject):
 
     def _on_segments_added(self) -> None:
         """Later segments bring their own word marks; re-align so they can be highlighted."""
-        # A read that started without marks (the first marks request failed) keeps the estimate:
-        # switching part-way would leave the unmarked chunk without progress and mix word indices.
+        # A read that started on the estimate keeps it; switching part-way would mix word indices.
         if self._session is None or self._mode != "marks":
             return
         index = self._session.index
@@ -79,7 +81,7 @@ class ReadAlongController(QObject):
             source=self._pending_source,
             editor_text=self._view.editor_text(),
             read_text=self._pending_text,
-            segment_marks=self._player.segment_marks(),
+            segment_marks=self._player.segment_marks() if self._mode == "marks" else [],
             wpm=self._view.current_wpm(),
         )
 

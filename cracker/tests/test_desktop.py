@@ -324,6 +324,29 @@ def test_read_along_keeps_the_estimate_when_the_first_chunk_has_no_marks(
     qt_app.processEvents()
 
 
+def test_cached_replay_without_first_chunk_marks_uses_the_estimate(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+    controller = window.read_along
+    assert controller is not None
+    window.set_read_source("textarea")
+    window.textEdit.setPlainText("Hello world again")
+
+    # A cache hit hands over every segment at once; only the first lacks marks.
+    player.play_segments(
+        [
+            AudioSegment(path=str(tmp_path / "a.mp3")),
+            AudioSegment(path=str(tmp_path / "b.mp3"), marks=[WordMark(0, "again")]),
+        ]
+    )
+    controller._on_state(QMediaPlayer.PlaybackState.PlayingState)
+
+    assert controller._mode == "estimate" and controller._session is not None
+    assert controller._session.total == 3 and controller._timer.isActive()
+    window.close()
+    player.stop()
+    qt_app.processEvents()
+
+
 def test_window_shows_preparing_and_allows_stop_before_audio(qt_app: QApplication, tmp_path: Path, monkeypatch):
     window, player = _make_main_window(tmp_path, monkeypatch)
 
