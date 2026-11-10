@@ -122,3 +122,13 @@ def test_stop_cancels_pending_selection():
     cracker.stop_text()
 
     cracker.selection_reader.cancel.assert_called_once()
+
+
+def test_clipboard_read_waits_for_selection_read():
+    cracker = _cracker()
+    cracker.player.playbackState.return_value = QMediaPlayer.PlaybackState.StoppedState
+
+    cracker.toggle_read_text_clipboard()
+
+    cracker.selection_reader.cancel.assert_called_once()
+    cracker.selection_reader.when_idle.assert_called_once_with(cracker._read_clipboard)

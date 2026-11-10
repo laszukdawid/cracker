@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -146,6 +147,42 @@ def test_copy_refuses_when_clipboard_cannot_be_backed_up():
         _copy(pasteboard, send_copy)
 
     send_copy.assert_not_called()
+
+
+def test_unreadable_clipboard_aborts_before_copy():
+    pasteboard = FakePasteboard([FakeItem({STRING: "previous"})])
+    pasteboard.pasteboardItems = lambda: None  # what NSPasteboard returns on a read error
+    send_copy = MagicMock()
+
+    with pytest.raises(selection_macos.SelectionError):
+        _copy(pasteboard, send_copy)
+
+    send_copy.assert_not_called()
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="pynput macOS layout helpers")
+@pytest.mark.parametrize(
+    "cmd_layout, expected",
+    [
+        ({8: "c"}, 8),  # QWERTY, and "Dvorak - QWERTY Cmd" which switches to QWERTY under Cmd
+        ({8: "j", 0x22: "c"}, 0x22),  # plain Dvorak keeps its layout under Cmd
+        ({8: "с"}, 8),  # Cyrillic: no "c", macOS maps Cmd shortcuts to the ANSI key
+    ],
+)
+def test_copy_keycode_uses_the_command_layout(monkeypatch, cmd_layout, expected):
+    import contextlib
+
+    from pynput._util import darwin
+
+    monkeypatch.setattr(darwin, "keycode_context", lambda: contextlib.nullcontext(None))
+
+    def keycode_to_string(context, vk, modifier_state=0):
+        assert modifier_state == selection_macos.CMD_MODIFIER_STATE
+        return cmd_layout.get(vk, "")
+
+    monkeypatch.setattr(darwin, "keycode_to_string", keycode_to_string)
+
+    assert selection_macos.copy_keycode() == expected
 
 
 def test_unbuildable_backup_aborts_before_copy():
@@ -478,9 +515,54 @@ def test_reader_reports_unsupported_platform():
     assert len(failures) == 1
 
 
-@pytest.mark.parametrize("names", [[], "f6", ["f6", "nope"], 5, [5], None])
+@pytest.mark.parametrize("names", [[], "f6", ["f6", "nope"], 5, [5], None, ["media_volume_up"]])
 def test_parse_hotkey_rejects_bad_names(names):
     from cracker.keylogger import parse_hotkey
 
     with pytest.raises(ValueError):
         parse_hotkey(names)
+
+
+def test_when_idle_runs_now_without_a_fetch():
+    reader, _, _ = _reader()
+    calls = []
+
+    reader.when_idle(lambda: calls.append("read"))
+
+    assert calls == ["read"]
+
+
+def test_when_idle_waits_for_a_running_fetch_to_finish():
+    pending, calls = [], []
+    reader = SelectionReader(
+        MagicMock(),
+        platform="darwin",
+        fetch=lambda should_continue: calls.append("fetch") or "selected",
+        is_trusted=lambda prompt: True,
+        start_thread=pending.append,
+    )
+
+    reader.request()
+    reader.cancel()  # a clipboard read stops the selection read first
+    reader.when_idle(lambda: calls.append("read clipboard"))
+    assert calls == []
+    pending[0]()
+
+    assert calls == ["fetch", "read clipboard"]
+
+
+def test_when_idle_runs_after_a_cancelled_fetch():
+    pending, calls = [], []
+
+    def fetch(should_continue):
+        raise selection_macos.SelectionCancelled()
+
+    reader = SelectionReader(
+        MagicMock(), platform="darwin", fetch=fetch, is_trusted=lambda prompt: True, start_thread=pending.append
+    )
+
+    reader.request()
+    reader.when_idle(lambda: calls.append("read clipboard"))
+    pending[0]()
+
+    assert calls == ["read clipboard"]

@@ -44,21 +44,31 @@ def selected_text_from_accessibility(pid: int) -> str:
     return str(text)
 
 
-def send_copy_shortcut() -> None:
-    """Press Cmd+C in the frontmost app, using the key that types "c" in the current layout."""
-    from pynput.keyboard import Controller, Key, KeyCode
+CMD_MODIFIER_STATE = 0x0100 >> 8  # Carbon cmdKey, in UCKeyTranslate's modifier-state units
 
-    vk = ANSI_C_KEYCODE
+
+def copy_keycode() -> int:
+    """The key that gives "c" while Cmd is held; layouts such as "Dvorak - QWERTY ⌘" switch keys under Cmd."""
     try:
-        from pynput._util.darwin import get_unicode_to_keycode_map
+        from pynput._util.darwin import keycode_context, keycode_to_string
 
-        vk = get_unicode_to_keycode_map().get("c", ANSI_C_KEYCODE)
+        with keycode_context() as context:
+            for vk in [ANSI_C_KEYCODE, *range(128)]:
+                if keycode_to_string(context, vk, CMD_MODIFIER_STATE).lower() == "c":
+                    return vk
     except Exception:
-        pass  # Non-Latin layouts have no "c"; macOS maps Cmd shortcuts to the ANSI key there.
+        pass
+    # Non-Latin layouts have no "c"; macOS maps Cmd shortcuts to the ANSI key there.
+    return ANSI_C_KEYCODE
+
+
+def send_copy_shortcut() -> None:
+    """Press Cmd+C in the frontmost app."""
+    from pynput.keyboard import Controller, Key, KeyCode
 
     controller = Controller()
     with controller.pressed(Key.cmd):
-        controller.tap(KeyCode.from_vk(vk))
+        controller.tap(KeyCode.from_vk(copy_keycode()))
 
 
 class SelectionError(Exception):
@@ -71,8 +81,11 @@ class SelectionCancelled(Exception):
 
 def snapshot_pasteboard(pasteboard: Any) -> PasteboardSnapshot:
     """Copy every item and format on the pasteboard, or raise if any can't be read back."""
+    items = pasteboard.pasteboardItems()
+    if items is None:  # nil means the read failed, not an empty clipboard
+        raise SelectionError("couldn't read the clipboard, so it was left alone")
     snapshot: PasteboardSnapshot = []
-    for item in pasteboard.pasteboardItems() or []:
+    for item in items:
         data_by_type = {}
         for pb_type in item.types():
             data = item.dataForType_(pb_type)

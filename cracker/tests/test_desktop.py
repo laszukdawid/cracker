@@ -319,9 +319,15 @@ def test_refresh_theme_icons_rebuilds_control_icons(qt_app: QApplication, tmp_pa
     qt_app.processEvents()
 
 
-def _started_manager(listener, swallow=False):
+def _passed(result):
+    """The event a tap callback passed through, unwrapped from the leak-workaround box."""
+    assert result is not None
+    return result.__pyobjc_object__
+
+
+def _started_manager(listener, swallow=False, selection=("f6",)):
     manager = KeyBoardManager()
-    manager.start(["ctrl", "shift", "space"], ["f6"], swallow_selection=swallow)
+    manager.start(["ctrl", "shift", "space"], list(selection), swallow_selection=swallow)
     clipboard, selection = [], []
     manager.GlobalReadSignal.connect(lambda: clipboard.append(True))
     manager.SelectionReadSignal.connect(lambda: selection.append(True))
@@ -338,9 +344,38 @@ def test_global_shortcut_emits_after_full_sequence(listener):
 
     assert clipboard == [True]
     assert selection == []
-    assert manager._pressed == set()
+    assert manager._pressed == {keyboard.Key.ctrl, keyboard.Key.shift}  # still held
     listener.return_value.start.assert_called_once()
     assert "darwin_intercept" not in listener.call_args.kwargs
+
+
+@patch("cracker.keylogger.keyboard.Listener")
+def test_held_modifiers_still_count_for_the_other_shortcut(listener):
+    manager, clipboard, selection = _started_manager(listener, selection=("ctrl", "f6"))
+
+    for key in (keyboard.Key.ctrl, keyboard.Key.shift, keyboard.Key.space):
+        manager.on_press(key)
+    manager.on_release(keyboard.Key.space)
+    manager.on_press(keyboard.Key.f6)
+    manager.on_release(keyboard.Key.f6)
+
+    assert clipboard == [True]
+    assert selection == [True]
+
+
+@patch("cracker.keylogger.keyboard.Listener")
+def test_holding_modifiers_fires_each_press_once(listener):
+    manager, clipboard, _ = _started_manager(listener)
+
+    manager.on_press(keyboard.Key.ctrl)
+    manager.on_press(keyboard.Key.shift)
+    for _ in range(2):
+        manager.on_press(keyboard.Key.space)
+        manager.on_release(keyboard.Key.space)
+    manager.on_release(keyboard.Key.shift)
+    manager.on_release(keyboard.Key.ctrl)
+
+    assert clipboard == [True, True]
 
 
 @patch("cracker.keylogger.keyboard.Listener")
@@ -368,8 +403,8 @@ def test_selection_key_is_swallowed_on_macos(listener):
     f6_down, f6_up, a_down = key_event(0x61, True), key_event(0x61, False), key_event(0x00, True)
     assert intercept(Quartz.kCGEventKeyDown, f6_down) is None
     assert intercept(Quartz.kCGEventKeyUp, f6_up) is None
-    assert intercept(Quartz.kCGEventKeyDown, a_down) is a_down
-    assert intercept(Quartz.kCGEventKeyUp, f6_up) is f6_up  # no matching swallowed key-down
+    assert _passed(intercept(Quartz.kCGEventKeyDown, a_down)) is a_down
+    assert _passed(intercept(Quartz.kCGEventKeyUp, f6_up)) is f6_up  # no matching swallowed key-down
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS event tap")
@@ -386,10 +421,10 @@ def test_modified_selection_key_keeps_first_decision_through_repeats(listener):
         return event
 
     plain_down, repeat, up = key_event(True), key_event(True, repeat=True), key_event(False)
-    assert intercept(Quartz.kCGEventKeyDown, plain_down) is plain_down  # Ctrl not held: F6 goes through
+    assert _passed(intercept(Quartz.kCGEventKeyDown, plain_down)) is plain_down  # Ctrl not held: F6 goes through
     manager.on_press(keyboard.Key.ctrl)
-    assert intercept(Quartz.kCGEventKeyDown, repeat) is repeat  # Ctrl pressed mid-repeat: still goes through
-    assert intercept(Quartz.kCGEventKeyUp, up) is up
+    assert _passed(intercept(Quartz.kCGEventKeyDown, repeat)) is repeat  # Ctrl pressed mid-repeat: still goes through
+    assert _passed(intercept(Quartz.kCGEventKeyUp, up)) is up
 
     combo_down = key_event(True)
     assert intercept(Quartz.kCGEventKeyDown, combo_down) is None

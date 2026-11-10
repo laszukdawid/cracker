@@ -120,14 +120,18 @@ class Cracker(object):
             self.player.stop()
         else:
             self.stop_text()
-            clipboard = self.app.clipboard()
-            assert clipboard is not None
-            text = clipboard.text()
+            # A selection read may have its Cmd+C copy on the clipboard; read once it's restored.
+            self.selection_reader.when_idle(self._read_clipboard)
 
-            self.text_parser.parser_rules = self.config.regex_config
-            text = self.text_parser.reduce_text(text)
-            self.gui.set_read_source("clipboard", text)
-            self._read(text)
+    def _read_clipboard(self):
+        clipboard = self.app.clipboard()
+        assert clipboard is not None
+        text = clipboard.text()
+
+        self.text_parser.parser_rules = self.config.regex_config
+        text = self.text_parser.reduce_text(text)
+        self.gui.set_read_source("clipboard", text)
+        self._read(text)
 
     def toggle_read_selection(self):
         """Reads out the text selected in the frontmost app, or stops the current read."""

@@ -28,8 +28,15 @@ def parse_hotkey(names: Sequence[str]) -> frozenset:
         key_name = name.strip().lower()
         if key_name not in keyboard.Key.__members__:
             raise ValueError(f"Unknown key {name!r} in shortcut {list(names)}")
+        if key_name.startswith("media_"):
+            # Media keys arrive as system events whose codes overlap ordinary keys (volume up is "A").
+            raise ValueError(f"Media keys can't be used in shortcuts, got {name!r}")
         keys.add(keyboard.Key[key_name])
     return frozenset(keys)
+
+
+class _TapReturnBox:
+    __slots__ = ("__pyobjc_object__",)
 
 
 class KeyBoardManager(QObject):
@@ -74,8 +81,8 @@ class KeyBoardManager(QObject):
         for hotkey, signal in self._hotkeys:
             if hotkey <= self._pressed:
                 signal.emit()
-                self._pressed -= hotkey
                 break
+        # Only the released key: modifiers still held may belong to the next shortcut.
         self._pressed.discard(key)
 
     def _darwin_interceptor(self, hotkey: frozenset) -> Callable[[Any, Any], Any]:
@@ -83,8 +90,18 @@ class KeyBoardManager(QObject):
         triggers = hotkey - MODIFIERS
         modifiers = hotkey & MODIFIERS
         trigger_vks = {key.value.vk for key in triggers}
+        passthrough = _TapReturnBox()
 
         def intercept(event_type, event):
+            decision = decide(event_type, event)
+            if decision is None:
+                return None
+            # PyObjC 13.0 leaks whatever a tap callback returns (pyobjc#694, fixed in 13.0.1). Returning
+            # one long-lived box moves that leak onto the box, so each event is freed when replaced.
+            passthrough.__pyobjc_object__ = decision
+            return passthrough
+
+        def decide(event_type, event):
             if event_type not in (quartz.kCGEventKeyDown, quartz.kCGEventKeyUp):
                 return event
             vk = quartz.CGEventGetIntegerValueField(event, quartz.kCGKeyboardEventKeycode)

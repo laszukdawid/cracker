@@ -10,6 +10,8 @@ from PyQt6.QtGui import QClipboard
 from cracker.selection_macos import SelectionCancelled
 from cracker.utils import get_logger
 
+CANCELLED = -1
+
 ACCESSIBILITY_HINT = (
     "To read selected text, allow Cracker's launcher in System Settings → Privacy & Security → Accessibility."
 )
@@ -59,6 +61,7 @@ class SelectionReader(QObject):
         self._busy = threading.Lock()
         self._request_id = 0
         self._closing = False
+        self._when_idle: list[Callable[[], None]] = []
         self._fetched.connect(self._deliver)
 
     def request(self) -> None:
@@ -77,6 +80,13 @@ class SelectionReader(QObject):
     def cancel(self) -> None:
         """Drop the result of any request still in flight."""
         self._request_id += 1
+
+    def when_idle(self, callback: Callable[[], None]) -> None:
+        """Run ``callback`` now, or once a running fetch has put the clipboard back."""
+        if self._busy.locked():
+            self._when_idle.append(callback)
+        else:
+            callback()
 
     def shutdown(self) -> None:
         """Stop accepting requests; a running fetch skips Cmd+C if it hasn't sent it yet."""
@@ -106,13 +116,14 @@ class SelectionReader(QObject):
             raise
 
     def _fetch_in_background(self, request_id: int) -> None:
+        text, error = "", ""
         try:
-            text, error = self._fetch(lambda: request_id == self._request_id and not self._closing), ""
+            text = self._fetch(lambda: request_id == self._request_id and not self._closing)
         except SelectionCancelled:
-            return
+            request_id = CANCELLED
         except Exception as exc:
             self._logger.exception("Reading the selection failed")
-            text, error = "", f"Couldn't read the selected text: {exc}"
+            error = f"Couldn't read the selected text: {exc}"
         finally:
             self._busy.release()
         if not self._closing:
@@ -125,3 +136,8 @@ class SelectionReader(QObject):
             self._logger.debug("Dropping a selection that was cancelled")
         else:
             self.textReady.emit(text)
+        # A new fetch may have started before this queued call ran; its completion runs these instead.
+        if not self._busy.locked():
+            callbacks, self._when_idle = self._when_idle, []
+            for callback in callbacks:
+                callback()
