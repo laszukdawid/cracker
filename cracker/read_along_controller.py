@@ -45,6 +45,7 @@ class ReadAlongController(QObject):
 
         player.readStarted.connect(self._on_started)
         player.readFinished.connect(self._on_finished)
+        player.segmentsAdded.connect(self._on_segments_added)
         player.positionChanged.connect(self._on_position)
         player.playbackStateChanged.connect(self._on_state)
 
@@ -54,13 +55,7 @@ class ReadAlongController(QObject):
         self._pending_text = text
 
     def _on_started(self) -> None:
-        self._session = build_session(
-            source=self._pending_source,
-            editor_text=self._view.editor_text(),
-            read_text=self._pending_text,
-            segment_marks=self._player.segment_marks(),
-            wpm=self._view.current_wpm(),
-        )
+        self._session = self._build_session()
         self._mode = "marks" if self._player.has_marks else "estimate"
         self._elapsed = 0.0
         self._view.set_reading_readonly(True)
@@ -68,6 +63,23 @@ class ReadAlongController(QObject):
         self._view.set_read_status(reading=True, words_done=0, total=self._session.total)
         # The estimate timer starts on PlayingState (see _on_state), not here, so
         # it doesn't advance during media load / stalls / invalid media.
+
+    def _on_segments_added(self) -> None:
+        """Later segments bring their own word marks; re-align so they can be highlighted."""
+        if self._session is None or self._mode != "marks":
+            return
+        index = self._session.index
+        self._session = self._build_session()
+        self._session.index = index
+
+    def _build_session(self) -> ReadAlongSession:
+        return build_session(
+            source=self._pending_source,
+            editor_text=self._view.editor_text(),
+            read_text=self._pending_text,
+            segment_marks=self._player.segment_marks(),
+            wpm=self._view.current_wpm(),
+        )
 
     def _on_position(self, position_ms: int) -> None:
         if self._session is None or self._mode != "marks":

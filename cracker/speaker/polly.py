@@ -1,4 +1,7 @@
 import os
+import threading
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 import boto3
@@ -8,11 +11,20 @@ from cracker.config import Configuration
 from cracker.mp3_helper import create_filename, save_mp3
 from cracker.read_along import AudioSegment, WordMark, parse_speech_marks
 from cracker.speaker import POLLY_LANGUAGES
+from cracker.speaker.synthesis import MAX_PARALLEL_REQUESTS, SpeechQueue
 from cracker.ssml import SSML
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
 
 from .abstract_speaker import AbstractSpeaker
+
+CONNECTION_HELP = (
+    "Unable to connect to AWS Polly. Please check your AWS configuration.\n\n"
+    "Please verify:\n"
+    "1. Your AWS profile is configured correctly\n"
+    "2. You are logged into AWS\n"
+    "3. Your credentials have access to AWS Polly"
+)
 
 
 class Polly(AbstractSpeaker):
@@ -39,18 +51,44 @@ class Polly(AbstractSpeaker):
         self._logger.debug("Using AWS profile: %s, region: %s", aws_profile, aws_region)
         try:
             self.client = self._connect_aws(aws_profile, aws_region)
+            self._warm_up()
         except Exception as e:
             self._logger.error("Error connecting to AWS: %s", e)
             self._connection_error = str(e)
 
         self.player = player
+        self._queue = SpeechQueue(player, self._show_synthesis_error)
+        self._marks_executor: ThreadPoolExecutor | None = None
 
     def __del__(self):
+        queue = getattr(self, "_queue", None)
+        if queue is not None:
+            queue.cancel()
+        executor = getattr(self, "_marks_executor", None)
+        if executor is not None:
+            executor.shutdown(wait=False, cancel_futures=True)
         try:
             for segment in getattr(self, "_cached_segments", []):
                 os.remove(segment.path)
         except OSError, TypeError:
             pass
+
+    def _warm_up(self) -> None:
+        """Resolve credentials and open a connection in the background, so the first read starts sooner.
+
+        SSO credentials alone take most of a second; ``describe_voices`` is a free call.
+        """
+        client = self.client
+        if client is None:
+            return
+
+        def warm() -> None:
+            try:
+                client.describe_voices(LanguageCode="en-US")
+            except Exception as error:
+                self._logger.debug("Polly warm-up failed: %s", error)
+
+        threading.Thread(target=warm, daemon=True, name="polly-warm-up").start()
 
     @staticmethod
     def _connect_aws(profile_name: str | None = None, region_name: str | None = None):
@@ -78,6 +116,7 @@ class Polly(AbstractSpeaker):
 
         try:
             self.client = self._connect_aws(aws_profile, aws_region)
+            self._warm_up()
             self._connection_error = None  # Clear any previous error
             self._logger.info("Successfully reloaded AWS Polly client")
         except Exception as e:
@@ -144,10 +183,12 @@ class Polly(AbstractSpeaker):
         self._cached_voice = voice
 
     def read_text(self, text: str, **config) -> None:
-        """Reads out text, attaching per-word speech marks to each segment."""
+        """Reads out text, attaching per-word speech marks to each segment.
+
+        Synthesis runs in the background; playback starts as soon as the first chunk is ready.
+        """
         text = self.clean_text(text)
         text = TextParser.escape_tags(text)
-        split_text = TextParser.split_text(text)
 
         rate = config.get("rate")
         volume = config.get("volume")
@@ -158,37 +199,41 @@ class Polly(AbstractSpeaker):
 
         if self._cached_ssml == ssml and self._cached_voice == voice:
             self._logger.debug("Playing cached file")
-            segments = self._cached_segments
-        else:
-            self._logger.debug("Request from Polly")
-            segments = []
-            # TODO: This should obviously be asynchronous!
-            try:
-                for idx, parted_text in enumerate(split_text):
-                    parted_ssml = str(SSML(parted_text, rate=rate, volume=volume))
-                    response = self.ask_polly(parted_ssml, voice)
-                    filename = create_filename(AbstractSpeaker.TMP_FILEPATH, idx)
-                    saved_filepath = save_mp3(response["AudioStream"].read(), filename)
-                    marks = self._fetch_marks(parted_ssml, voice)
-                    segments.append(AudioSegment(path=saved_filepath, marks=marks))
-                self.save_cache(ssml, segments, voice)
-            except (RuntimeError, Exception) as e:
-                self._logger.error("Failed to read text with Polly: %s", e)
-                # Drop the partial files written this attempt, then invalidate
-                # the cache: a failed segment may have overwritten deterministic
-                # temp files the previous cache still referenced, so a later
-                # cache hit must not replay corrupted/mixed audio.
-                for segment in segments:
-                    try:
-                        os.remove(segment.path)
-                    except OSError:
-                        pass
-                self._cached_ssml = SSML()
-                self._cached_segments = []
-                self._cached_voice = ""
-                return  # Exit gracefully without crashing
-        self.player.play_segments(segments)
-        return
+            self._queue.cancel()
+            self.player.play_segments(self._cached_segments)
+            return
+
+        if self.client is None or self._connection_error:
+            self._logger.error("Attempted to use Polly without valid AWS connection")
+            self._show_error_dialog(CONNECTION_HELP, f"Error details: {self._connection_error}")
+            return
+
+        self._logger.debug("Request from Polly")
+        token = uuid.uuid4().hex[:8]
+        self._queue.start(
+            TextParser.split_for_speech(text),
+            lambda index, chunk: self._synthesize_chunk(token, index, chunk, rate, volume, voice),
+            on_finished=lambda segments: self.save_cache(ssml, segments, voice),
+        )
+
+    def _synthesize_chunk(self, token: str, index: int, text: str, rate, volume, voice: str) -> AudioSegment:
+        """Runs on a worker thread: fetches the audio and its word marks at the same time."""
+        parted_ssml = str(SSML(text, rate=rate, volume=volume))
+        marks = self._marks_pool().submit(self._fetch_marks, parted_ssml, voice)
+        response = self.ask_polly(parted_ssml, voice)
+        filename = create_filename(f"polly-{token}.mp3", index)
+        saved_filepath = save_mp3(response["AudioStream"].read(), filename)
+        return AudioSegment(path=saved_filepath, marks=marks.result())
+
+    def _marks_pool(self) -> ThreadPoolExecutor:
+        if self._marks_executor is None:
+            self._marks_executor = ThreadPoolExecutor(MAX_PARALLEL_REQUESTS, thread_name_prefix="polly-marks")
+        return self._marks_executor
+
+    def _show_synthesis_error(self, message: str) -> None:
+        self._show_error_dialog(
+            "An error occurred while trying to synthesize speech with AWS Polly.", f"Error details: {message}"
+        )
 
     def _fetch_marks(self, ssml_text: str, voice: str) -> List[WordMark]:
         """Requests word-level speech marks for one SSML chunk.
@@ -223,27 +268,13 @@ class Polly(AbstractSpeaker):
         msg_box.exec()
 
     def ask_polly(self, ssml_text: str, voice: str):
-        """Connects to Polly and returns path to save mp3"""
+        """Synthesises ``ssml_text``; may run on a worker thread, so it raises instead of showing dialogs."""
         if self.client is None or self._connection_error:
-            error_msg = (
-                "Unable to connect to AWS Polly. Please check your AWS configuration.\n\n"
-                "Please verify:\n"
-                "1. Your AWS profile is configured correctly\n"
-                "2. You are logged into AWS\n"
-                "3. Your credentials have access to AWS Polly"
-            )
-            self._logger.error("Attempted to use Polly without valid AWS connection")
-            self._show_error_dialog(error_msg, f"Error details: {self._connection_error}")
-            raise RuntimeError("AWS Polly client not initialized")
-
+            raise RuntimeError(f"AWS Polly client not initialized: {self._connection_error}")
         try:
-            speech = self.create_speech(ssml_text, voice)
-            response = self.client.synthesize_speech(**speech)
-            return response
+            return self.client.synthesize_speech(**self.create_speech(ssml_text, voice))
         except Exception as e:
-            error_msg = "An error occurred while trying to synthesize speech with AWS Polly."
             self._logger.error("Error calling Polly synthesize_speech: %s", e)
-            self._show_error_dialog(error_msg, f"Error details: {str(e)}")
             raise
 
     @staticmethod
@@ -252,4 +283,5 @@ class Polly(AbstractSpeaker):
         return dict(OutputFormat="mp3", TextType="ssml", Text=ssml_text, VoiceId=voice)
 
     def stop_text(self) -> None:
+        self._queue.cancel()
         self.player.stop()

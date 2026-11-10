@@ -12,8 +12,8 @@ def _cracker():
     cracker.key_manager = MagicMock()
     cracker.selection_reader = MagicMock()
     cracker.config = MagicMock(shortcuts=dict(DEFAULT_SHORTCUTS), shortcut_warning=None)
-    cracker.player = MagicMock()
-    cracker.speaker = MagicMock()
+    cracker.player = MagicMock(waiting_for_segment=False)
+    cracker.speaker = MagicMock(is_synthesizing=False)
     cracker.text_parser = MagicMock()
     cracker._accessibility_trusted = MagicMock(return_value=False)
     return cracker
@@ -31,11 +31,13 @@ def test_change_speaker_reuses_one_backend_in_gui():
     cracker = object.__new__(Cracker)
     cracker.player = MagicMock()
     cracker.gui = MagicMock()
+    old_speaker = cracker.speaker = MagicMock()
     speaker = MagicMock()
     cracker.get_speaker = MagicMock(return_value=speaker)
 
     cracker.change_speaker("espeak")
 
+    old_speaker.stop_text.assert_called_once()  # its pending synthesis must not play later
     cracker.get_speaker.assert_called_once_with("espeak", cracker.player)
     cracker.gui.change_speaker.assert_called_once_with("espeak", speaker)
     assert cracker.speaker is speaker
@@ -46,11 +48,12 @@ def test_change_speaker_saves_pending_settings_before_reloading_config():
     cracker.player = MagicMock()
     calls = MagicMock()
     cracker.gui = calls.gui
+    cracker.speaker = calls.old_speaker
     cracker.get_speaker = calls.get_speaker
 
     cracker.change_speaker("google")
 
-    assert [c[0] for c in calls.mock_calls[:2]] == ["gui.flush_pending_save", "get_speaker"]
+    assert [c[0] for c in calls.mock_calls[:3]] == ["gui.flush_pending_save", "old_speaker.stop_text", "get_speaker"]
 
 
 def test_set_action_starts_both_global_shortcuts():
@@ -134,6 +137,28 @@ def test_stop_cancels_pending_selection():
     cracker.stop_text()
 
     cracker.selection_reader.cancel.assert_called_once()
+
+
+def test_read_shortcut_stops_while_speech_is_still_being_made():
+    cracker = _cracker()
+    cracker.player.playbackState.return_value = QMediaPlayer.PlaybackState.StoppedState
+    cracker.speaker.is_synthesizing = True
+
+    cracker.toggle_read_selection()
+
+    cracker.selection_reader.request.assert_not_called()
+    cracker.speaker.stop_text.assert_called_once()
+
+
+def test_read_shortcut_stops_while_waiting_for_the_next_chunk():
+    cracker = _cracker()
+    cracker.player.playbackState.return_value = QMediaPlayer.PlaybackState.StoppedState
+    cracker.player.waiting_for_segment = True
+
+    cracker.toggle_read_text_clipboard()
+
+    cracker.selection_reader.when_idle.assert_not_called()
+    cracker.speaker.stop_text.assert_called_once()
 
 
 def test_clipboard_read_waits_for_selection_read():

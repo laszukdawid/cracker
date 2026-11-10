@@ -22,6 +22,7 @@ class AudioPlayer(QMediaPlayer):
     readStarted = pyqtSignal()
     readFinished = pyqtSignal()
     segmentStarted = pyqtSignal(int)
+    segmentsAdded = pyqtSignal()
     _logger = get_logger(__name__)
 
     def __init__(self) -> None:
@@ -32,6 +33,8 @@ class AudioPlayer(QMediaPlayer):
         self._segment_marks: list[list[WordMark]] = []
         self._current_index = -1
         self._reading = False
+        self._more_coming = False  # more segments will be appended to this read
+        self._waiting = False  # the queue ran dry while more segments are coming
         self.mediaStatusChanged.connect(self._handle_media_status)
 
     def play_file(self, filepath: str) -> None:
@@ -41,23 +44,48 @@ class AudioPlayer(QMediaPlayer):
         """Plays plain audio files with no word timing (estimate fallback)."""
         self.play_segments([AudioSegment(path=filepath) for filepath in filepaths])
 
-    def play_segments(self, segments: Iterable[AudioSegment]) -> None:
-        """Plays audio segments in order, carrying their per-word marks."""
+    def play_segments(self, segments: Iterable[AudioSegment], more_coming: bool = False) -> None:
+        """Plays audio segments in order, carrying their per-word marks.
+
+        With ``more_coming`` the read stays open for ``append_segment`` until one is appended
+        with ``more_coming=False``.
+        """
         segments = list(segments)
         self.stop()
+        self._more_coming = more_coming
         self._segment_marks = [list(segment.marks) for segment in segments]
         self._queued_sources.extend(QUrl.fromLocalFile(segment.path) for segment in segments)
         self._play_next()
+
+    def append_segment(self, segment: AudioSegment, more_coming: bool = False) -> None:
+        """Adds a segment to the current read, or starts a new read if none is open."""
+        if not self._reading:
+            self.play_segments([segment], more_coming)
+            return
+        self._more_coming = more_coming
+        self._segment_marks.append(list(segment.marks))
+        self._queued_sources.append(QUrl.fromLocalFile(segment.path))
+        self.segmentsAdded.emit()
+        if self._waiting:
+            self._waiting = False
+            self._play_next()
 
     def stop(self) -> None:
         self._queued_sources.clear()
         self._segment_marks = []
         self._current_index = -1
+        self._more_coming = False
+        self._waiting = False
         was_reading = self._reading
         self._reading = False
         super().stop()
         if was_reading:
             self.readFinished.emit()
+
+    @property
+    def waiting_for_segment(self) -> bool:
+        """The read played everything it has so far and the next segment is still being made."""
+        return self._waiting
 
     @property
     def has_marks(self) -> bool:
@@ -81,6 +109,9 @@ class AudioPlayer(QMediaPlayer):
 
     def _play_next(self) -> None:
         if not self._queued_sources:
+            if self._reading and self._more_coming:
+                self._waiting = True  # the next segment is still being synthesised
+                return
             if self._reading:
                 self._reading = False
                 self._current_index = -1

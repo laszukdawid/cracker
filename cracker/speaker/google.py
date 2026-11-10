@@ -1,9 +1,12 @@
 import os
+import uuid
 
-from google.cloud import texttospeech
+from PyQt6.QtWidgets import QMessageBox
 
 from cracker.mp3_helper import create_filename, save_mp3
+from cracker.read_along import AudioSegment
 from cracker.speaker import GOOGLE_LANGUAGES
+from cracker.speaker.synthesis import SpeechQueue, remove_files
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
 
@@ -22,8 +25,18 @@ class Google(AbstractSpeaker):
     def __init__(self, player, credentials_file: str | None = None):
         self._connect_google(credentials_file)
         self.player = player
+        self._queue = SpeechQueue(player, self._show_synthesis_error)
+        self._segments: list[AudioSegment] = []
+
+    def __del__(self):
+        queue = getattr(self, "_queue", None)
+        if queue is not None:
+            queue.cancel()
+        remove_files(getattr(self, "_segments", []))
 
     def _connect_google(self, credentials_file=None):
+        from google.cloud import texttospeech  # slow to import; only loaded when Google is used
+
         try:
             if credentials_file is not None:
                 self._logger.info("Using credentials file: %s", credentials_file)
@@ -41,26 +54,43 @@ class Google(AbstractSpeaker):
             raise e
 
     def read_text(self, text: str, **config) -> None:
-        """Reads out text."""
+        """Reads out text; synthesis runs in the background and playback starts with the first chunk."""
+        from google.cloud import texttospeech
+
         text = self.clean_text(text)
         text = TextParser.escape_tags(text)
-        split_text = TextParser.split_text(text)
-
         voice = texttospeech.VoiceSelectionParams(
             language_code=config.get("voice"),
             ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL,
         )
+        token = uuid.uuid4().hex[:8]
+        self._queue.start(
+            TextParser.split_for_speech(text),
+            lambda index, chunk: self._synthesize_chunk(token, index, chunk, voice),
+            on_finished=self._keep_segments,
+        )
 
-        filepaths = []
-        for idx, parted_text in enumerate(split_text):
-            self._logger.debug("Reading text: %s", parted_text)
-            response = self.ask_google(parted_text, voice)
-            filename = create_filename(AbstractSpeaker.TMP_FILEPATH, idx)
-            saved_filepath = save_mp3(response.audio_content, filename)
-            filepaths.append(saved_filepath)
-        self.play_files(filepaths)
+    def _synthesize_chunk(self, token: str, index: int, text: str, voice) -> AudioSegment:
+        """Runs on a worker thread."""
+        response = self.ask_google(text, voice)
+        filename = create_filename(f"google-{token}.mp3", index)
+        return AudioSegment(path=save_mp3(response.audio_content, filename))
+
+    def _keep_segments(self, segments: list[AudioSegment]) -> None:
+        remove_files(self._segments)
+        self._segments = segments
+
+    def _show_synthesis_error(self, message: str) -> None:
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Icon.Critical)
+        msg_box.setWindowTitle("Google Text-to-Speech Error")
+        msg_box.setText("An error occurred while trying to synthesize speech with Google.")
+        msg_box.setInformativeText(f"Error details: {message}")
+        msg_box.exec()
 
     def ask_google(self, text: str, voice):
+        from google.cloud import texttospeech
+
         audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
         synth_speech = texttospeech.SynthesisInput(text=text)
         response = self.client.synthesize_speech(input=synth_speech, voice=voice, audio_config=audio_config)
@@ -70,4 +100,5 @@ class Google(AbstractSpeaker):
         self.player.play_files(filepaths)
 
     def stop_text(self) -> None:
+        self._queue.cancel()
         self.player.stop()

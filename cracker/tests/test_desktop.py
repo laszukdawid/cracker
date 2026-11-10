@@ -257,6 +257,33 @@ def test_read_along_marks_mode_tracks_playback_position(qt_app: QApplication, tm
     qt_app.processEvents()
 
 
+def test_read_along_highlights_segments_that_arrive_later(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+    controller = window.read_along
+    assert controller is not None
+    window.set_read_source("textarea")
+    window.textEdit.setPlainText("Hello world again")
+
+    first = AudioSegment(path=str(tmp_path / "a.mp3"), marks=[WordMark(0, "Hello"), WordMark(400, "world")])
+    player.play_segments([first], more_coming=True)
+    player.positionChanged.emit(450)
+    assert controller._session is not None and controller._session.index == 1
+
+    player.append_segment(AudioSegment(path=str(tmp_path / "b.mp3"), marks=[WordMark(0, "again")]))
+    assert controller._session.total == 3 and controller._session.index == 1  # progress kept
+
+    player.mediaStatusChanged.emit(QMediaPlayer.MediaStatus.EndOfMedia)
+    player.positionChanged.emit(10)
+    assert controller._session.index == 2
+    assert controller._session.highlight_for(2) == (12, 5)  # "again" in the editor
+
+    window.close()
+    player.stop()
+    window.deleteLater()
+    player.deleteLater()
+    qt_app.processEvents()
+
+
 def test_read_along_estimate_paces_clipboard_by_read_text(qt_app: QApplication, tmp_path: Path, monkeypatch):
     window, player = _make_main_window(tmp_path, monkeypatch)
     controller = window.read_along

@@ -115,7 +115,7 @@ class Cracker(object):
     def toggle_read_text_clipboard(self):
         """Reads out text from the clipboard with selected speaker."""
         self._logger.debug("Reading text from clipboard")
-        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+        if self._is_reading():
             self.stop_text()
             self.player.stop()
         else:
@@ -136,7 +136,7 @@ class Cracker(object):
     def toggle_read_selection(self):
         """Reads out the text selected in the frontmost app, or stops the current read."""
         self._logger.debug("Reading selected text")
-        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+        if self._is_reading():
             self.stop_text()
             self.player.stop()
         else:
@@ -170,6 +170,14 @@ class Cracker(object):
 
         return selection_macos.is_trusted(prompt=False)
 
+    def _is_reading(self) -> bool:
+        """Playing, waiting for the next chunk, or still synthesising the first one."""
+        return (
+            self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState
+            or self.player.waiting_for_segment
+            or self.speaker.is_synthesizing
+        )
+
     def _read(self, text):
         self._logger.debug(f"Reading text: {text}")
         speaker_config = self._prepare_config()
@@ -197,6 +205,7 @@ class Cracker(object):
         """
         # Creating a speaker reloads the shared config from disk, which would drop an unsaved change.
         self.gui.flush_pending_save()
+        self.speaker.stop_text()  # the old speaker's synthesis would otherwise still play
         self.speaker = self.get_speaker(speaker_name, self.player)
         self.gui.change_speaker(speaker_name, self.speaker)
 

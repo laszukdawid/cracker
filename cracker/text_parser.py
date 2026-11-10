@@ -127,6 +127,22 @@ class TextParser:
             yield part
         yield doc_residue
 
+    @staticmethod
+    def split_for_speech(text: str, first_max: int = 300, max_char: int = 3000) -> list[str]:
+        """Chunks for synthesis, with a short first one so speech can start quickly.
+
+        The first chunk ends at the last sentence break within ``first_max`` characters, or at the
+        last space if there is none; the rest is split as ``split_text`` does.
+        """
+        if len(text) <= first_max:
+            return [text]
+        head = text[:first_max]
+        cut = head.rfind(". ")
+        cut = cut + 2 if cut > 0 else head.rfind(" ") + 1
+        if cut <= 0:
+            cut = first_max
+        return [text[:cut], *(part for part in TextParser.split_text(text[cut:], max_char) if part.strip())]
+
     @classmethod
     def split_text_per_sentence(cls, text: str) -> list[str]:
         return split_into_sentences(text)

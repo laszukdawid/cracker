@@ -25,6 +25,12 @@ class AbstractSpeaker(abc.ABC):
     def stop_text(self) -> None:
         raise NotImplementedError(f"Class {self.__class__.__name__} doesn't implement `stop_text()`")
 
+    @property
+    def is_synthesizing(self) -> bool:
+        """Speech is still being made for the current read."""
+        queue = getattr(self, "_queue", None)
+        return queue is not None and queue.busy
+
     @classmethod
     def clean_text(cls, text):
         text = text.translate(dict.fromkeys(range(8)))

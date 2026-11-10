@@ -56,67 +56,86 @@ def test_polly_fetch_marks_returns_empty_on_error():
     assert polly._fetch_marks("<speak>hi</speak>", "Joanna") == []
 
 
-def test_polly_read_text_cleans_partial_files_on_failure(tmp_path, monkeypatch):
+def _polly(tmp_path, monkeypatch):
     from cracker.ssml import SSML
 
     polly = object.__new__(Polly)
     polly.player = MagicMock()
+    polly.client = MagicMock()
+    polly._connection_error = None
     polly._cached_ssml = SSML()
     polly._cached_segments = []
     polly._cached_voice = ""
-
-    # Force two chunks so the first is written before the second fails.
-    monkeypatch.setattr(
-        "cracker.speaker.polly.TextParser.split_text",
-        staticmethod(lambda text, max_char=3000: iter(["one", "two"])),
-    )
-    written = []
+    polly._marks_executor = None
+    polly._queue = MagicMock()
+    polly._show_error_dialog = MagicMock()
 
     def fake_save(stream, base_filename):
         path = tmp_path / base_filename
-        path.write_bytes(b"audio")
-        written.append(path)
+        path.write_bytes(stream)
         return str(path)
 
     monkeypatch.setattr("cracker.speaker.polly.save_mp3", fake_save)
-
-    calls = {"n": 0}
-
-    def fake_ask(ssml_text, voice):
-        calls["n"] += 1
-        if calls["n"] >= 2:
-            raise RuntimeError("boom on the second chunk")
-        return {"AudioStream": MagicMock(read=lambda: b"audio")}
-
-    polly.ask_polly = fake_ask
-    polly._fetch_marks = MagicMock(return_value=[])
-
-    polly.read_text("one two", rate="medium", volume="medium", voice="Joanna")
-
-    assert written and not any(path.exists() for path in written)  # partial file removed
-    assert polly._cached_segments == []
-    polly.player.play_segments.assert_not_called()
+    return polly
 
 
-def test_polly_read_text_invalidates_cache_on_synthesis_failure():
+def test_polly_read_text_synthesises_in_the_background_with_a_short_first_chunk(tmp_path, monkeypatch):
+    polly = _polly(tmp_path, monkeypatch)
+    text = "First sentence here. " * 40
+
+    polly.read_text(text, rate="medium", volume="medium", voice="Joanna")
+
+    chunks = polly._queue.start.call_args.args[0]
+    assert len(chunks[0]) <= 300 and "".join(chunks) == text
+    polly.player.play_segments.assert_not_called()  # the queue starts playback once audio exists
+
+
+def test_polly_chunk_fetches_audio_and_marks_together(tmp_path, monkeypatch):
+    import threading
+
+    polly = _polly(tmp_path, monkeypatch)
+    both_running = threading.Barrier(2, timeout=2)
+
+    def synthesize_speech(**request):
+        both_running.wait()  # deadlocks unless audio and marks are requested at the same time
+        body = (
+            b'{"time":0,"type":"word","start":0,"end":2,"value":"Hi"}' if request["OutputFormat"] == "json" else b"mp3"
+        )
+        return {"AudioStream": MagicMock(read=lambda: body)}
+
+    polly.client.synthesize_speech.side_effect = synthesize_speech
+
+    segment = polly._synthesize_chunk("tok", 0, "Hi", "medium", "medium", "Joanna")
+
+    assert open(segment.path, "rb").read() == b"mp3"
+    assert [mark.value for mark in segment.marks] == ["Hi"]
+    assert "tok" in segment.path
+
+
+def test_polly_replays_the_cache_without_synthesising(tmp_path, monkeypatch):
     from cracker.read_along import AudioSegment
     from cracker.ssml import SSML
 
-    polly = object.__new__(Polly)
-    polly.player = MagicMock()
-    # A prior successful read left a cache pointing at deterministic temp files.
-    polly._cached_ssml = SSML("previous text")
-    polly._cached_segments = [AudioSegment(path="tmp-0.mp3")]
+    polly = _polly(tmp_path, monkeypatch)
+    polly._cached_ssml = SSML("cached text", rate="medium", volume="medium")
     polly._cached_voice = "Joanna"
-    polly.ask_polly = MagicMock(side_effect=RuntimeError("boom"))
+    polly._cached_segments = [AudioSegment(path="cached.mp3")]
 
-    polly.read_text("brand new text", rate="medium", volume="medium", voice="Joanna")
+    polly.read_text("cached text", rate="medium", volume="medium", voice="Joanna")
 
-    # Cache invalidated so a later read can't replay possibly-overwritten files.
-    assert polly._cached_segments == []
-    assert polly._cached_voice == ""
-    assert polly._cached_ssml == SSML()
-    polly.player.play_segments.assert_not_called()
+    polly.player.play_segments.assert_called_once_with(polly._cached_segments)
+    polly._queue.start.assert_not_called()
+
+
+def test_polly_without_a_connection_explains_and_does_not_synthesise(tmp_path, monkeypatch):
+    polly = _polly(tmp_path, monkeypatch)
+    polly.client = None
+    polly._connection_error = "no profile"
+
+    polly.read_text("hello", rate="medium", volume="medium", voice="Joanna")
+
+    polly._show_error_dialog.assert_called_once()
+    polly._queue.start.assert_not_called()
 
 
 def test_google_uses_explicit_service_account_file():
@@ -124,7 +143,7 @@ def test_google_uses_explicit_service_account_file():
     client = MagicMock()
 
     with patch(
-        "cracker.speaker.google.texttospeech.TextToSpeechClient.from_service_account_json",
+        "google.cloud.texttospeech.TextToSpeechClient.from_service_account_json",
         return_value=client,
     ) as connect:
         speaker = Google(player, "~/.config/google/service-account.json")
