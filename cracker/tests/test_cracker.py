@@ -11,7 +11,7 @@ def _cracker():
     cracker.gui = MagicMock()
     cracker.key_manager = MagicMock()
     cracker.selection_reader = MagicMock()
-    cracker.config = MagicMock(shortcuts=dict(DEFAULT_SHORTCUTS))
+    cracker.config = MagicMock(shortcuts=dict(DEFAULT_SHORTCUTS), shortcut_warning=None)
     cracker.player = MagicMock()
     cracker.speaker = MagicMock()
     cracker.text_parser = MagicMock()
@@ -104,3 +104,21 @@ def test_selection_text_is_reduced_and_read():
 
     cracker.gui.set_read_source.assert_called_once_with("clipboard", "clean text")
     cracker._read.assert_called_once_with("clean text")
+
+
+def test_config_shortcut_warning_is_shown():
+    cracker = _cracker()
+    cracker.config.shortcut_warning = "Ignoring 'shortcuts' in settings"
+
+    cracker._start_global_shortcuts()
+
+    cracker.gui.show_notice.assert_called_once_with("Ignoring 'shortcuts' in settings")
+    cracker.key_manager.start.assert_called_once()
+
+
+def test_stop_cancels_pending_selection():
+    cracker = _cracker()
+
+    cracker.stop_text()
+
+    cracker.selection_reader.cancel.assert_called_once()

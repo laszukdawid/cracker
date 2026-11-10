@@ -132,3 +132,4 @@ def test_non_mapping_shortcuts_fall_back_to_defaults(mock_isdir, mock_isfile, mo
     applied = config.apply_config(raw)
 
     assert applied["shortcuts"] == {"read_clipboard": ["ctrl", "shift", "space"], "read_selection": ["f6"]}
+    assert config.shortcut_warning is not None

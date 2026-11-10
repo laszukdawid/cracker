@@ -65,6 +65,10 @@ class SelectionError(Exception):
     """A failure the user should see; the message is shown in the status bar."""
 
 
+class SelectionCancelled(Exception):
+    """The request was cancelled before Cmd+C was sent; nothing was changed."""
+
+
 def snapshot_pasteboard(pasteboard: Any) -> PasteboardSnapshot:
     """Copy every item and format on the pasteboard, or raise if any can't be read back."""
     snapshot: PasteboardSnapshot = []
@@ -79,18 +83,24 @@ def snapshot_pasteboard(pasteboard: Any) -> PasteboardSnapshot:
     return snapshot
 
 
-def restore_pasteboard(pasteboard: Any, snapshot: PasteboardSnapshot, make_item: Callable[[], Any]) -> None:
-    # Build everything first so a failure can't leave the clipboard cleared.
+def prepare_restore_items(snapshot: PasteboardSnapshot, make_item: Callable[[], Any]) -> list[Any]:
+    """Build the pasteboard items that put ``snapshot`` back, before anything is changed."""
     items = []
     for data_by_type in snapshot:
         item = make_item()
         for pb_type, data in data_by_type.items():
             if not item.setData_forType_(data, pb_type):
-                raise SelectionError("couldn't restore the previous clipboard")
+                raise SelectionError("the clipboard holds data that can't be backed up, so it was left alone")
         items.append(item)
-    pasteboard.clearContents()
-    if items and not pasteboard.writeObjects_(items):
-        raise SelectionError("couldn't restore the previous clipboard")
+    return items
+
+
+def restore_pasteboard(pasteboard: Any, items: list[Any]) -> None:
+    for _ in range(2):
+        pasteboard.clearContents()
+        if not items or pasteboard.writeObjects_(items):
+            return
+    raise SelectionError("couldn't restore the previous clipboard")
 
 
 def selected_text_from_copy(
@@ -98,37 +108,46 @@ def selected_text_from_copy(
     string_type: str,
     make_item: Callable[[], Any],
     send_copy: Callable[[], None] = send_copy_shortcut,
+    before_copy: Callable[[], None] = lambda: None,
     timeout: float = COPY_TIMEOUT_S,
     sleep: Callable[[float], None] = time.sleep,
     clock: Callable[[], float] = time.monotonic,
 ) -> str:
     """Copy the selection via Cmd+C, read it, then restore the clipboard that was there before.
 
-    A copy that lands after ``timeout`` can't be told apart from the user's own copy, so it isn't undone.
+    ``before_copy`` runs right before Cmd+C and may raise to abort with nothing changed. The first
+    clipboard change after Cmd+C is taken to be the copy: another copy inside ``timeout`` can't be told
+    apart from it, and one that lands after ``timeout`` isn't undone. A copy made after ours is kept.
     """
     before = pasteboard.changeCount()
-    snapshot = snapshot_pasteboard(pasteboard)
+    items = prepare_restore_items(snapshot_pasteboard(pasteboard), make_item)
     if pasteboard.changeCount() != before:
         raise SelectionError("the clipboard changed while it was being backed up; try again")
+    before_copy()
 
     text = None
+    copy_count = None
     try:
         send_copy()
         deadline = clock() + timeout
         while clock() < deadline:
-            if pasteboard.changeCount() != before:
+            count = pasteboard.changeCount()
+            if count != before:
                 # Apps clear the pasteboard before writing, so wait for the string to land.
                 text = pasteboard.stringForType_(string_type)
                 if text is not None:
+                    # Counted before the read, so a copy made after it shows up as a newer count.
+                    copy_count = count
                     break
             sleep(POLL_INTERVAL_S)
     finally:
-        if pasteboard.changeCount() != before:
-            restore_pasteboard(pasteboard, snapshot, make_item)
+        current = pasteboard.changeCount()
+        if current != before and (copy_count is None or current == copy_count):
+            restore_pasteboard(pasteboard, items)
     return str(text) if text else ""
 
 
-def get_selected_text() -> str:
+def get_selected_text(should_continue: Callable[[], bool] = lambda: True) -> str:
     appkit = _framework("AppKit")
     workspace = appkit.NSWorkspace.sharedWorkspace()
     front = workspace.frontmostApplication()
@@ -140,12 +159,17 @@ def get_selected_text() -> str:
     if text.strip():
         return text
 
-    # Accessibility calls can take a while; don't send Cmd+C to an app the user has switched to.
-    current = workspace.frontmostApplication()
-    if current is None or current.processIdentifier() != pid:
-        raise SelectionError("the app in front changed before its selection could be copied")
+    def before_copy() -> None:
+        if not should_continue():
+            raise SelectionCancelled()
+        # Earlier steps can take a while; don't send Cmd+C to an app the user has switched to.
+        current = workspace.frontmostApplication()
+        if current is None or current.processIdentifier() != pid:
+            raise SelectionError("the app in front changed before its selection could be copied")
+
     return selected_text_from_copy(
         pasteboard=appkit.NSPasteboard.generalPasteboard(),
         string_type=appkit.NSPasteboardTypeString,
         make_item=lambda: appkit.NSPasteboardItem.alloc().init(),
+        before_copy=before_copy,
     )

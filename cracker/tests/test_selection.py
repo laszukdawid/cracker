@@ -148,19 +148,76 @@ def test_copy_refuses_when_clipboard_cannot_be_backed_up():
     send_copy.assert_not_called()
 
 
-def test_restore_failure_leaves_clipboard_uncleared():
+def test_unbuildable_backup_aborts_before_copy():
     class BrokenItem(FakeItem):
         def setData_forType_(self, data, pb_type):
             return False
 
-    pasteboard = FakePasteboard([FakeItem({STRING: "selected"})])
-    before = pasteboard.count
+    pasteboard = FakePasteboard([FakeItem({STRING: "previous"})])
+    send_copy = MagicMock()
 
     with pytest.raises(selection_macos.SelectionError):
-        selection_macos.restore_pasteboard(pasteboard, [{STRING: "previous"}], make_item=BrokenItem)
+        selection_macos.selected_text_from_copy(pasteboard, STRING, make_item=BrokenItem, send_copy=send_copy)
 
-    assert pasteboard.count == before
-    assert pasteboard.items[0].data == {STRING: "selected"}
+    send_copy.assert_not_called()
+    assert pasteboard.items[0].data == {STRING: "previous"}
+
+
+def test_restore_retries_a_failed_write():
+    pasteboard = FakePasteboard([FakeItem({STRING: "selected"})])
+    results = iter([False, True])
+    pasteboard.writeObjects_ = lambda items: next(results)
+
+    selection_macos.restore_pasteboard(pasteboard, [FakeItem({STRING: "previous"})])
+
+
+def test_restore_reports_repeated_write_failure():
+    pasteboard = FakePasteboard([FakeItem({STRING: "selected"})])
+    pasteboard.writeObjects_ = lambda items: False
+
+    with pytest.raises(selection_macos.SelectionError):
+        selection_macos.restore_pasteboard(pasteboard, [FakeItem({STRING: "previous"})])
+
+
+def test_copy_keeps_a_newer_copy_made_after_ours():
+    class UserCopiesAfterRead(FakePasteboard):
+        read_selection = False
+
+        def stringForType_(self, pb_type):
+            text = super().stringForType_(pb_type)
+            if text == "selected" and not self.read_selection:
+                self.read_selection = True
+                self.copy_count = self.count
+            return text
+
+        def changeCount(self):
+            # The user copies something right after Cracker has read the selection.
+            if self.read_selection and self.count == self.copy_count:
+                self.app_copies("user copy")
+            return self.count
+
+    pasteboard = UserCopiesAfterRead([FakeItem({STRING: "previous"})])
+
+    text = _copy(pasteboard, lambda: pasteboard.app_copies("selected"))
+
+    assert text == "selected"
+    assert pasteboard.items[0].data == {STRING: "user copy"}
+
+
+def test_before_copy_can_abort_without_changes():
+    pasteboard = FakePasteboard([FakeItem({STRING: "previous"})])
+    send_copy = MagicMock()
+
+    def cancelled():
+        raise selection_macos.SelectionCancelled()
+
+    with pytest.raises(selection_macos.SelectionCancelled):
+        selection_macos.selected_text_from_copy(
+            pasteboard, STRING, make_item=FakeItem, send_copy=send_copy, before_copy=cancelled
+        )
+
+    send_copy.assert_not_called()
+    assert pasteboard.items[0].data == {STRING: "previous"}
 
 
 class FakeApp:
@@ -190,19 +247,38 @@ def test_get_selected_text_prefers_accessibility(monkeypatch):
     copy.assert_not_called()
 
 
+def _copy_that_runs_before_copy(**kwargs):
+    kwargs["before_copy"]()
+    return "copied"
+
+
 def test_get_selected_text_does_not_copy_after_focus_change(monkeypatch):
     monkeypatch.setattr(selection_macos, "_framework", lambda name: _fake_appkit([42, 7]))
     monkeypatch.setattr(selection_macos, "selected_text_from_accessibility", lambda pid: "")
-    copy = MagicMock()
-    monkeypatch.setattr(selection_macos, "selected_text_from_copy", copy)
+    monkeypatch.setattr(selection_macos, "selected_text_from_copy", _copy_that_runs_before_copy)
 
     with pytest.raises(selection_macos.SelectionError):
         selection_macos.get_selected_text()
 
-    copy.assert_not_called()
+
+def test_get_selected_text_skips_copy_when_cancelled(monkeypatch):
+    monkeypatch.setattr(selection_macos, "_framework", lambda name: _fake_appkit([42, 42]))
+    monkeypatch.setattr(selection_macos, "selected_text_from_accessibility", lambda pid: "")
+    monkeypatch.setattr(selection_macos, "selected_text_from_copy", _copy_that_runs_before_copy)
+
+    with pytest.raises(selection_macos.SelectionCancelled):
+        selection_macos.get_selected_text(should_continue=lambda: False)
 
 
-def _reader(platform="darwin", fetch=lambda: "hello", trusted=True, clipboard=None):
+def test_get_selected_text_copies_when_focus_is_unchanged(monkeypatch):
+    monkeypatch.setattr(selection_macos, "_framework", lambda name: _fake_appkit([42, 42]))
+    monkeypatch.setattr(selection_macos, "selected_text_from_accessibility", lambda pid: "")
+    monkeypatch.setattr(selection_macos, "selected_text_from_copy", _copy_that_runs_before_copy)
+
+    assert selection_macos.get_selected_text() == "copied"
+
+
+def _reader(platform="darwin", fetch=lambda should_continue: "hello", trusted=True, clipboard=None):
     reader = SelectionReader(
         clipboard or MagicMock(),
         platform=platform,
@@ -239,7 +315,7 @@ def test_reader_asks_for_accessibility_when_untrusted():
 def test_reader_reports_fetch_errors_and_recovers():
     calls = []
 
-    def fetch():
+    def fetch(should_continue):
         calls.append(1)
         if len(calls) == 1:
             raise RuntimeError("boom")
@@ -259,7 +335,7 @@ def test_reader_drops_result_cancelled_by_stop():
     reader = SelectionReader(
         MagicMock(),
         platform="darwin",
-        fetch=lambda: "late text",
+        fetch=lambda should_continue: "late text",
         is_trusted=lambda prompt: True,
         start_thread=pending.append,
     )
@@ -271,6 +347,54 @@ def test_reader_drops_result_cancelled_by_stop():
     pending[0]()
 
     assert texts == []
+
+
+def test_reader_reports_errors_even_after_cancel():
+    pending = []
+
+    def fetch(should_continue):
+        raise selection_macos.SelectionError("couldn't restore the previous clipboard")
+
+    reader = SelectionReader(
+        MagicMock(), platform="darwin", fetch=fetch, is_trusted=lambda prompt: True, start_thread=pending.append
+    )
+    failures = []
+    reader.failed.connect(failures.append)
+
+    reader.request()
+    reader.cancel()
+    pending[0]()
+
+    assert failures == ["Couldn't read the selected text: couldn't restore the previous clipboard"]
+
+
+def test_reader_tells_fetch_to_stop_after_cancel():
+    pending, seen = [], []
+    reader = SelectionReader(
+        MagicMock(),
+        platform="darwin",
+        fetch=lambda should_continue: seen.append(should_continue()) or "",
+        is_trusted=lambda prompt: True,
+        start_thread=pending.append,
+    )
+
+    reader.request()
+    reader.shutdown()
+    pending[0]()
+
+    assert seen == [False]
+
+
+def test_reader_swallows_cancelled_fetch_silently():
+    def fetch(should_continue):
+        raise selection_macos.SelectionCancelled()
+
+    reader, texts, failures = _reader(fetch=fetch)
+
+    reader.request()
+
+    assert texts == failures == []
+    assert reader._busy.acquire(blocking=False)
 
 
 def test_reader_reports_permission_check_errors():
@@ -316,15 +440,19 @@ def test_reader_ignores_request_while_busy():
     reader = SelectionReader(
         MagicMock(),
         platform="darwin",
-        fetch=lambda: "text",
+        fetch=lambda should_continue: "text",
         is_trusted=lambda prompt: True,
         start_thread=pending.append,
     )
+    texts = []
+    reader.textReady.connect(texts.append)
 
     reader.request()
-    reader.request()
+    reader.request()  # ignored while the first fetch runs, and must not cancel it
+    pending[0]()
 
     assert len(pending) == 1
+    assert texts == ["text"]
 
 
 def test_reader_uses_primary_selection_on_linux():

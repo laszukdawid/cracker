@@ -149,6 +149,8 @@ class Cracker(object):
         self._read(text)
 
     def _start_global_shortcuts(self):
+        if self.config.shortcut_warning:
+            self.gui.show_notice(self.config.shortcut_warning)
         shortcuts = self.config.shortcuts
         swallow = sys.platform == "darwin" and self._accessibility_trusted()
         try:

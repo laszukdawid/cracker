@@ -35,6 +35,7 @@ class Configuration(Singleton):
     credentials_file = {}
 
     shortcuts: Dict[str, List[str]] = DEFAULT_SHORTCUTS
+    shortcut_warning: str | None = None
 
     regex_config = None
     raw_config: Dict | None = None
@@ -149,10 +150,14 @@ class Configuration(Singleton):
         if self.voice not in self.lang_voices:
             _config["voice"] = self.voice = self.lang_voices[0]
 
-        user_shortcuts = configuration.get("shortcuts") or {}
-        if not isinstance(user_shortcuts, dict):
-            # Each shortcut's keys are checked when the listener starts, which falls back to the defaults.
-            self._logger.warning("Ignoring 'shortcuts' in config: expected a mapping, got %r", user_shortcuts)
+        # Each shortcut's keys are checked when the listener starts, which also falls back to the defaults.
+        user_shortcuts = configuration.get("shortcuts")
+        self.shortcut_warning = None
+        if user_shortcuts is None:
+            user_shortcuts = {}
+        elif not isinstance(user_shortcuts, dict):
+            self.shortcut_warning = f"Ignoring 'shortcuts' in settings, expected a mapping: {user_shortcuts!r}"
+            self._logger.warning(self.shortcut_warning)
             user_shortcuts = {}
         _config["shortcuts"] = self.shortcuts = {**DEFAULT_SHORTCUTS, **user_shortcuts}
 
