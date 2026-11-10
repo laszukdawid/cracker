@@ -29,10 +29,24 @@ class Google(AbstractSpeaker):
         self._segments: list[AudioSegment] = []
 
     def __del__(self):
+        try:
+            self.shutdown()
+        except Exception:
+            pass
+
+    def shutdown(self) -> None:
+        # Once only: __del__ may run after the player has moved on to another speaker.
+        if getattr(self, "_shut_down", False):
+            return
+        self._shut_down = True
         queue = getattr(self, "_queue", None)
         if queue is not None:
             queue.cancel()
+        player = getattr(self, "player", None)
+        if player is not None:
+            player.stop()
         remove_files(getattr(self, "_segments", []))
+        self._segments = []
 
     def _connect_google(self, credentials_file=None):
         from google.cloud import texttospeech  # slow to import; only loaded when Google is used
@@ -58,14 +72,14 @@ class Google(AbstractSpeaker):
         from google.cloud import texttospeech
 
         text = self.clean_text(text)
-        text = TextParser.escape_tags(text)
+        chunks = [TextParser.escape_tags(chunk) for chunk in TextParser.split_for_speech(text)]
         voice = texttospeech.VoiceSelectionParams(
             language_code=config.get("voice"),
             ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL,
         )
         token = uuid.uuid4().hex[:8]
         self._queue.start(
-            TextParser.split_for_speech(text),
+            chunks,
             lambda index, chunk: self._synthesize_chunk(token, index, chunk, voice),
             on_finished=self._keep_segments,
         )

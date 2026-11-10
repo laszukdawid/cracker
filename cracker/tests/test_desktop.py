@@ -284,6 +284,58 @@ def test_read_along_highlights_segments_that_arrive_later(qt_app: QApplication, 
     qt_app.processEvents()
 
 
+def test_estimate_timer_pauses_while_waiting_for_the_next_chunk(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+    controller = window.read_along
+    assert controller is not None
+    window.set_read_source("clipboard", "one two three four")
+    player.play_segments([AudioSegment(path=str(tmp_path / "a.mp3"))], more_coming=True)
+    controller._on_state(QMediaPlayer.PlaybackState.PlayingState)
+    assert controller._timer.isActive()
+
+    controller._on_state(QMediaPlayer.PlaybackState.StoppedState)  # first chunk ended, next not here yet
+
+    assert not controller._timer.isActive()
+    window.close()
+    player.stop()
+    qt_app.processEvents()
+
+
+def test_read_along_switches_to_marks_when_later_chunks_have_them(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+    controller = window.read_along
+    assert controller is not None
+    window.set_read_source("textarea")
+    window.textEdit.setPlainText("Hello world again")
+
+    player.play_segments([AudioSegment(path=str(tmp_path / "a.mp3"))], more_coming=True)  # marks request failed
+    assert controller._mode == "estimate"
+
+    player.append_segment(AudioSegment(path=str(tmp_path / "b.mp3"), marks=[WordMark(0, "again")]))
+
+    assert controller._mode == "marks" and not controller._timer.isActive()
+    window.close()
+    player.stop()
+    qt_app.processEvents()
+
+
+def test_window_shows_preparing_and_allows_stop_before_audio(qt_app: QApplication, tmp_path: Path, monkeypatch):
+    window, player = _make_main_window(tmp_path, monkeypatch)
+
+    player.set_preparing(True)
+    assert window.stop_button.isEnabled() and not window.read_button.isEnabled()
+    assert not window.pause_button.isEnabled()
+    assert window.statusLeftLabel.text() == "Preparing speech…"
+
+    player.set_preparing(False)  # cancelled or failed before any audio
+    assert not window.stop_button.isEnabled() and window.read_button.isEnabled()
+    assert window.statusLeftLabel.text() == "Idle"
+
+    window.close()
+    player.stop()
+    qt_app.processEvents()
+
+
 def test_read_along_estimate_paces_clipboard_by_read_text(qt_app: QApplication, tmp_path: Path, monkeypatch):
     window, player = _make_main_window(tmp_path, monkeypatch)
     controller = window.read_along

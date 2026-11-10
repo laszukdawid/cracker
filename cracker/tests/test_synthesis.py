@@ -1,7 +1,9 @@
 import threading
+import wave
 from pathlib import Path
 
 import pytest
+from PyQt6.QtCore import QEventLoop, QTimer
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtTest import QSignalSpy
 from PyQt6.QtWidgets import QApplication
@@ -100,6 +102,9 @@ class FakePlayer:
     def stop(self):
         self.calls.append(("stop",))
 
+    def set_preparing(self, preparing):
+        self.calls.append(("preparing", preparing))
+
 
 def _sync_job(chunks, synthesize):
     job = SynthesisJob(chunks, synthesize)
@@ -113,7 +118,13 @@ def test_queue_starts_playing_the_first_segment_and_appends_the_rest(qt_app: QAp
 
     queue.start(["a", "b"], _writer(tmp_path), on_finished=kept.append, job_factory=_sync_job)
 
-    assert player.calls == [("play", ["chunk-0.mp3"], True), ("append", "chunk-1.mp3", False)]
+    assert player.calls == [
+        ("preparing", True),
+        ("play", ["chunk-0.mp3"], True),
+        ("preparing", False),
+        ("append", "chunk-1.mp3", False),
+        ("preparing", False),  # repeated on finish; the real player ignores repeats
+    ]
     assert len(kept[0]) == 2 and not queue.busy
 
 
@@ -123,7 +134,7 @@ def test_queue_stops_and_reports_a_failure(qt_app: QApplication, tmp_path: Path)
 
     queue.start(["a", "b"], _writer(tmp_path, fail_on=1), job_factory=_sync_job)
 
-    assert player.calls[-1] == ("stop",)
+    assert player.calls[-2:] == [("preparing", False), ("stop",)]
     assert errors == ["chunk 1 failed"]
 
 
@@ -144,7 +155,7 @@ def test_queue_drops_a_cancelled_job_that_finished_anyway(qt_app: QApplication, 
     job._cancelled.clear()  # the worker passed its last cancel check before cancel() ran
     pending.pop()()
 
-    assert player.calls == [] and kept == []
+    assert player.calls == [("preparing", True), ("preparing", False)] and kept == []
     assert list(tmp_path.iterdir()) == []  # the stale job's files were removed
 
 
@@ -195,3 +206,75 @@ def test_stop_ends_a_read_that_was_waiting(player: AudioPlayer, tmp_path: Path):
     player.stop()
 
     assert not player.waiting_for_segment and len(finished) == 1
+
+
+def test_cancel_skips_chunks_that_have_not_started(qt_app: QApplication, tmp_path: Path):
+    release_first = threading.Event()
+    first_started = threading.Event()
+    started = []
+
+    def synthesize(index, chunk):
+        started.append(index)
+        if index == 0:
+            first_started.set()
+            release_first.wait(2)
+        return AudioSegment(path=str(tmp_path / f"{index}.mp3"))
+
+    job = SynthesisJob([str(i) for i in range(20)], synthesize, max_workers=2)
+    worker = threading.Thread(target=job._run)
+    worker.start()
+    assert first_started.wait(2)
+    job.cancel()
+    release_first.set()
+    worker.join(2)
+
+    assert len(started) <= 2  # only requests already in flight when Stop was pressed
+
+
+def test_job_cancelled_before_it_runs_requests_nothing(qt_app: QApplication, tmp_path: Path):
+    started = []
+
+    def synthesize(index: int, chunk: str) -> AudioSegment:
+        started.append(index)
+        return AudioSegment(path=str(tmp_path / f"{index}.mp3"))
+
+    job = SynthesisJob(["a", "b"], synthesize)
+    job.cancel()
+    _run_sync(job)
+    assert started == []
+
+
+def _silence(path: Path) -> AudioSegment:
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(8_000)
+        output.writeframes(b"\0\0" * 400)
+    return AudioSegment(path=str(path))
+
+
+def _wait_for(player: AudioPlayer, condition, timeout_ms=3000) -> None:
+    loop = QEventLoop()
+    timer = QTimer()
+    timer.timeout.connect(lambda: condition() and loop.quit())
+    timer.start(10)
+    QTimer.singleShot(timeout_ms, loop.quit)
+    loop.exec()
+    timer.stop()
+
+
+def test_pause_during_a_synthesis_gap_holds_the_next_segment(player: AudioPlayer, tmp_path: Path):
+    player.audio_output.setMuted(True)
+    player.play_segments([_silence(tmp_path / "a.wav")], more_coming=True)
+    _wait_for(player, lambda: player.waiting_for_segment)
+    assert player.waiting_for_segment
+
+    player.pause()
+    player.append_segment(_silence(tmp_path / "b.wav"))
+    _wait_for(player, lambda: False, timeout_ms=200)
+
+    assert player.playbackState() == QMediaPlayer.PlaybackState.PausedState
+    assert player.source().toLocalFile().endswith("b.wav")
+
+    player.play()  # Resume
+    assert player.playbackState() == QMediaPlayer.PlaybackState.PlayingState

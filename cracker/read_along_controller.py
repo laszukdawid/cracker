@@ -66,7 +66,13 @@ class ReadAlongController(QObject):
 
     def _on_segments_added(self) -> None:
         """Later segments bring their own word marks; re-align so they can be highlighted."""
-        if self._session is None or self._mode != "marks":
+        if self._session is None:
+            return
+        if self._mode == "estimate" and self._player.has_marks:
+            # The first chunk came without marks (its request failed); use them from here on.
+            self._timer.stop()
+            self._mode = "marks"
+        if self._mode != "marks":
             return
         index = self._session.index
         self._session = self._build_session()
@@ -106,10 +112,12 @@ class ReadAlongController(QObject):
         # own because positionChanged stops firing while paused.
         if self._session is None or self._mode != "estimate":
             return
-        if state == QMediaPlayer.PlaybackState.PausedState:
+        if state == QMediaPlayer.PlaybackState.PlayingState:
+            if not self._timer.isActive():
+                self._timer.start()
+        else:
+            # Paused, or stopped while the next chunk is still being synthesised.
             self._timer.stop()
-        elif state == QMediaPlayer.PlaybackState.PlayingState and not self._timer.isActive():
-            self._timer.start()
 
     def _on_finished(self) -> None:
         self._timer.stop()

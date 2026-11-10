@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from cracker.speaker.google import Google
-from cracker.speaker.polly import Polly
+from cracker.speaker.polly import CLIENT_CONFIG, Polly
 
 
 def test_polly_connects_with_configured_profile_and_region():
@@ -12,7 +12,7 @@ def test_polly_connects_with_configured_profile_and_region():
         result = Polly._connect_aws("work", "us-west-2")
 
     session.assert_called_once_with(profile_name="work", region_name="us-west-2")
-    session.return_value.client.assert_called_once_with("polly")
+    session.return_value.client.assert_called_once_with("polly", config=CLIENT_CONFIG)
     assert result is client
 
 
@@ -164,3 +164,33 @@ def test_google_builds_text_synthesis_request():
     assert kwargs["voice"] is voice
     assert kwargs["input"].text == "Hello"
     assert kwargs["audio_config"].audio_encoding.name == "MP3"
+
+
+def test_polly_chunks_never_split_an_escaped_entity(tmp_path, monkeypatch):
+    import xml.etree.ElementTree as ElementTree
+
+    from cracker.ssml import SSML
+
+    polly = _polly(tmp_path, monkeypatch)
+    polly.read_text("x" * 298 + "& <b>" + "y" * 40, rate="medium", volume="medium", voice="Joanna")
+
+    chunks = polly._queue.start.call_args.args[0]
+    assert len(chunks) == 2
+    for chunk in chunks:
+        ElementTree.fromstring(str(SSML(chunk, rate="medium", volume="medium")))  # valid SSML
+
+
+def test_polly_shutdown_cancels_and_removes_cached_audio_once(tmp_path, monkeypatch):
+    from cracker.read_along import AudioSegment
+
+    polly = _polly(tmp_path, monkeypatch)
+    cached = tmp_path / "cached.mp3"
+    cached.write_bytes(b"mp3")
+    polly._cached_segments = [AudioSegment(path=str(cached))]
+
+    polly.shutdown()
+    polly.shutdown()  # e.g. __del__ later: must not stop the next speaker's playback
+
+    polly._queue.cancel.assert_called_once()
+    polly.player.stop.assert_called_once()
+    assert not cached.exists()

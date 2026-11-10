@@ -123,6 +123,7 @@ class MainWindow(QMainWindow):
         # between queued files). The read-along controller wires the rest.
         self.player.readStarted.connect(self._on_read_started)
         self.player.readFinished.connect(self._on_read_finished)
+        self.player.preparingChanged.connect(self._on_preparing)
         self.player.playbackStateChanged.connect(self._on_playback_state)
 
         self.reduce_action = QAction("Reduce", self)
@@ -468,6 +469,20 @@ class MainWindow(QMainWindow):
 
     def _on_read_finished(self) -> None:
         self._set_playback_buttons(playing=False)
+
+    def _on_preparing(self, preparing: bool) -> None:
+        """Before the first audio arrives: Stop cancels the read, the rest wait."""
+        if self.player is not None and self.player.is_reading:
+            return  # readStarted/readFinished own the buttons once audio plays
+        if preparing:
+            self._set_playback_buttons(playing=True)
+            if hasattr(self, "pause_button"):
+                self.pause_button.setEnabled(False)
+            self.toggle_action.setDisabled(True)
+            self.statusLeftLabel.setText("Preparing speech…")
+        else:
+            self._set_playback_buttons(playing=False)
+            self.set_read_status(reading=False)
 
     def _on_playback_state(self, state) -> None:
         # Only the pause/resume affordance changes here; start/stop are handled

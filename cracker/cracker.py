@@ -57,6 +57,7 @@ class Cracker(object):
         "Handles closing whole application"
         self.key_manager.stop()
         self.selection_reader.shutdown()
+        self.speaker.shutdown()  # cancels synthesis and removes this session's audio files
 
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         config = self.config.read_config()
@@ -205,7 +206,7 @@ class Cracker(object):
         """
         # Creating a speaker reloads the shared config from disk, which would drop an unsaved change.
         self.gui.flush_pending_save()
-        self.speaker.stop_text()  # the old speaker's synthesis would otherwise still play
+        self.speaker.shutdown()  # its synthesis would otherwise still play; also frees its files
         self.speaker = self.get_speaker(speaker_name, self.player)
         self.gui.change_speaker(speaker_name, self.speaker)
 

@@ -5,13 +5,14 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 import boto3
+from botocore.config import Config
 from PyQt6.QtWidgets import QMessageBox
 
 from cracker.config import Configuration
 from cracker.mp3_helper import create_filename, save_mp3
 from cracker.read_along import AudioSegment, WordMark, parse_speech_marks
 from cracker.speaker import POLLY_LANGUAGES
-from cracker.speaker.synthesis import MAX_PARALLEL_REQUESTS, SpeechQueue
+from cracker.speaker.synthesis import MAX_PARALLEL_REQUESTS, SpeechQueue, remove_files
 from cracker.ssml import SSML
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
@@ -25,6 +26,11 @@ CONNECTION_HELP = (
     "2. You are logged into AWS\n"
     "3. Your credentials have access to AWS Polly"
 )
+
+
+# botocore waits 60 s by default; a dead connection would hold up Stop and quitting that long.
+# A 3,000-character synthesis takes about 1.3 s.
+CLIENT_CONFIG = Config(connect_timeout=5, read_timeout=20, retries={"max_attempts": 3, "mode": "standard"})
 
 
 class Polly(AbstractSpeaker):
@@ -61,17 +67,30 @@ class Polly(AbstractSpeaker):
         self._marks_executor: ThreadPoolExecutor | None = None
 
     def __del__(self):
+        try:
+            self.shutdown()
+        except Exception:
+            pass
+
+    def shutdown(self) -> None:
+        # Once only: __del__ may run after the player has moved on to another speaker.
+        if getattr(self, "_shut_down", False):
+            return
+        self._shut_down = True
         queue = getattr(self, "_queue", None)
         if queue is not None:
             queue.cancel()
+        player = getattr(self, "player", None)
+        if player is not None:
+            player.stop()
         executor = getattr(self, "_marks_executor", None)
         if executor is not None:
             executor.shutdown(wait=False, cancel_futures=True)
-        try:
-            for segment in getattr(self, "_cached_segments", []):
-                os.remove(segment.path)
-        except OSError, TypeError:
-            pass
+            self._marks_executor = None
+        remove_files(getattr(self, "_cached_segments", []))
+        self._cached_ssml = SSML()
+        self._cached_segments = []
+        self._cached_voice = ""
 
     def _warm_up(self) -> None:
         """Resolve credentials and open a connection in the background, so the first read starts sooner.
@@ -95,7 +114,7 @@ class Polly(AbstractSpeaker):
         """Connect to AWS and create Polly client"""
         try:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
-            return session.client("polly")
+            return session.client("polly", config=CLIENT_CONFIG)
         except Exception as e:
             Polly._logger.exception(
                 "Unable to connect to AWS with the profile '%s' and region '%s'. "
@@ -188,6 +207,8 @@ class Polly(AbstractSpeaker):
         Synthesis runs in the background; playback starts as soon as the first chunk is ready.
         """
         text = self.clean_text(text)
+        # Split before escaping so a chunk boundary can't fall inside an entity such as "&amp;".
+        chunks = [TextParser.escape_tags(chunk) for chunk in TextParser.split_for_speech(text)]
         text = TextParser.escape_tags(text)
 
         rate = config.get("rate")
@@ -211,7 +232,7 @@ class Polly(AbstractSpeaker):
         self._logger.debug("Request from Polly")
         token = uuid.uuid4().hex[:8]
         self._queue.start(
-            TextParser.split_for_speech(text),
+            chunks,
             lambda index, chunk: self._synthesize_chunk(token, index, chunk, rate, volume, voice),
             on_finished=lambda segments: self.save_cache(ssml, segments, voice),
         )

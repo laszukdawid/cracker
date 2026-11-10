@@ -37,7 +37,7 @@ def test_change_speaker_reuses_one_backend_in_gui():
 
     cracker.change_speaker("espeak")
 
-    old_speaker.stop_text.assert_called_once()  # its pending synthesis must not play later
+    old_speaker.shutdown.assert_called_once()  # its pending synthesis must not play later
     cracker.get_speaker.assert_called_once_with("espeak", cracker.player)
     cracker.gui.change_speaker.assert_called_once_with("espeak", speaker)
     assert cracker.speaker is speaker
@@ -53,7 +53,7 @@ def test_change_speaker_saves_pending_settings_before_reloading_config():
 
     cracker.change_speaker("google")
 
-    assert [c[0] for c in calls.mock_calls[:3]] == ["gui.flush_pending_save", "old_speaker.stop_text", "get_speaker"]
+    assert [c[0] for c in calls.mock_calls[:3]] == ["gui.flush_pending_save", "old_speaker.shutdown", "get_speaker"]
 
 
 def test_set_action_starts_both_global_shortcuts():
@@ -169,3 +169,11 @@ def test_clipboard_read_waits_for_selection_read():
 
     cracker.selection_reader.cancel.assert_called_once()
     cracker.selection_reader.when_idle.assert_called_once_with(cracker._read_clipboard)
+
+
+def test_closing_the_app_shuts_the_speaker_down():
+    cracker = _cracker()
+
+    cracker._close()
+
+    cracker.speaker.shutdown.assert_called_once()

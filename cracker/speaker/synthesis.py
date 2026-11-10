@@ -47,7 +47,8 @@ class SynthesisJob(QObject):
         self._chunks = chunks
         self._synthesize = synthesize
         self._max_workers = max_workers
-        self._start_thread = start_thread or (lambda target: threading.Thread(target=target, daemon=True).start())
+        # Not a daemon: at exit Python waits for requests already sent, so their files are removed.
+        self._start_thread = start_thread or (lambda target: threading.Thread(target=target, name="synthesis").start())
         self._cancelled = threading.Event()
 
     @property
@@ -60,15 +61,25 @@ class SynthesisJob(QObject):
     def cancel(self) -> None:
         self._cancelled.set()
 
+    def _synthesize_unless_cancelled(self, index: int, chunk: str) -> AudioSegment | None:
+        # Chunks still queued when the read is cancelled must not be requested (or billed).
+        if self.cancelled:
+            return None
+        return self._synthesize(index, chunk)
+
     def _run(self) -> None:
+        if self.cancelled:
+            return
         done: list[AudioSegment] = []
         with ThreadPoolExecutor(max_workers=self._max_workers, thread_name_prefix="synthesis") as pool:
-            futures: list[Future[AudioSegment]] = [
-                pool.submit(self._synthesize, index, chunk) for index, chunk in enumerate(self._chunks)
+            futures: list[Future[AudioSegment | None]] = [
+                pool.submit(self._synthesize_unless_cancelled, index, chunk) for index, chunk in enumerate(self._chunks)
             ]
             try:
                 for index, future in enumerate(futures):
                     segment = future.result()
+                    if segment is None:  # skipped after cancel
+                        break
                     done.append(segment)
                     if self.cancelled:
                         break
@@ -82,7 +93,11 @@ class SynthesisJob(QObject):
                 for future in futures:
                     future.cancel()
                 # Requests already running finish; keep their files too so they can be removed.
-                done.extend(f.result() for f in futures[len(done) :] if not f.cancelled() and f.exception() is None)
+                for future in futures:
+                    if not future.cancelled() and future.exception() is None:
+                        segment = future.result()
+                        if segment is not None and segment not in done:
+                            done.append(segment)
         if self.cancelled:
             remove_files(done)
         else:
@@ -115,6 +130,7 @@ class SpeechQueue:
         self._job = job
         self._started_playing = False
         self._on_finished = on_finished
+        self._player.set_preparing(True)
         job.segmentReady.connect(lambda segment, more: self._segment_ready(job, segment, more))
         job.finished.connect(lambda segments: self._finished(job, segments))
         job.failed.connect(lambda message: self._failed(job, message))
@@ -124,6 +140,7 @@ class SpeechQueue:
         if self._job is not None:
             self._job.cancel()
             self._job = None
+            self._player.set_preparing(False)
 
     @property
     def busy(self) -> bool:
@@ -137,17 +154,20 @@ class SpeechQueue:
         else:
             self._started_playing = True
             self._player.play_segments([segment], more)
+            self._player.set_preparing(False)
 
     def _finished(self, job: SynthesisJob, segments: list[AudioSegment]) -> None:
         if job is not self._job:
             remove_files(segments)  # cancelled after the job's last check; the files are ours now
             return
         self._job = None
+        self._player.set_preparing(False)
         self._on_finished(segments)
 
     def _failed(self, job: SynthesisJob, message: str) -> None:
         if job is not self._job:
             return
         self._job = None
+        self._player.set_preparing(False)
         self._player.stop()
         self._on_error(message)

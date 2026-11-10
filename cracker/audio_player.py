@@ -23,6 +23,7 @@ class AudioPlayer(QMediaPlayer):
     readFinished = pyqtSignal()
     segmentStarted = pyqtSignal(int)
     segmentsAdded = pyqtSignal()
+    preparingChanged = pyqtSignal(bool)  # speech for a new read is being synthesised
     _logger = get_logger(__name__)
 
     def __init__(self) -> None:
@@ -35,6 +36,8 @@ class AudioPlayer(QMediaPlayer):
         self._reading = False
         self._more_coming = False  # more segments will be appended to this read
         self._waiting = False  # the queue ran dry while more segments are coming
+        self._user_paused = False  # paused by the user; kept across segments that arrive later
+        self._preparing = False
         self.mediaStatusChanged.connect(self._handle_media_status)
 
     def play_file(self, filepath: str) -> None:
@@ -70,17 +73,41 @@ class AudioPlayer(QMediaPlayer):
             self._waiting = False
             self._play_next()
 
+    def pause(self) -> None:
+        self._user_paused = True
+        super().pause()
+
+    def play(self) -> None:
+        self._user_paused = False
+        if self._waiting:
+            return  # nothing is loaded yet; the next segment starts playing when it arrives
+        super().play()
+
+    def set_preparing(self, preparing: bool) -> None:
+        if preparing != self._preparing:
+            self._preparing = preparing
+            self.preparingChanged.emit(preparing)
+
+    @property
+    def preparing(self) -> bool:
+        return self._preparing
+
     def stop(self) -> None:
         self._queued_sources.clear()
         self._segment_marks = []
         self._current_index = -1
         self._more_coming = False
         self._waiting = False
+        self._user_paused = False
         was_reading = self._reading
         self._reading = False
         super().stop()
         if was_reading:
             self.readFinished.emit()
+
+    @property
+    def is_reading(self) -> bool:
+        return self._reading
 
     @property
     def waiting_for_segment(self) -> bool:
@@ -129,4 +156,7 @@ class AudioPlayer(QMediaPlayer):
             self.setSource(QUrl())
         self.setSource(source)
         self.segmentStarted.emit(self._current_index)
-        self.play()
+        if self._user_paused:
+            super().pause()  # loaded, but waits for Resume
+        else:
+            super().play()
