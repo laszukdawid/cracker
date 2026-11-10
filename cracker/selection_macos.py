@@ -83,20 +83,18 @@ def copy_shortcut_sender() -> Callable[[], None]:
     Call this on the main thread: reading the keyboard layout anywhere else makes macOS abort the
     process. A layout that can't be read is reported only if the copy is actually needed.
     """
-    try:
-        keycode = copy_keycode()
-    except SelectionError as exc:
-        error = exc  # ``exc`` is cleared when the except block ends
-
-        def unavailable() -> None:
-            raise error
-
-        return unavailable
-
     from pynput.keyboard import Controller, Key, KeyCode
 
-    copy_key = KeyCode.from_vk(keycode)
-    controller = Controller()  # also reads the layout
+    try:
+        copy_key = KeyCode.from_vk(copy_keycode())
+        controller = Controller()  # reads the layout again
+    except Exception as exc:
+        reason = exc if isinstance(exc, SelectionError) else SelectionError(f"couldn't prepare the copy key ({exc})")
+
+        def unavailable() -> None:
+            raise reason
+
+        return unavailable
 
     def send() -> None:
         with controller.pressed(Key.cmd):

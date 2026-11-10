@@ -301,6 +301,22 @@ class FakeApp:
         return self.pid
 
 
+@pytest.mark.skipif(sys.platform != "darwin", reason="pynput macOS layout helpers")
+def test_controller_layout_failure_is_reported_only_when_copy_is_needed(monkeypatch):
+    from pynput import keyboard
+
+    monkeypatch.setattr(selection_macos, "copy_keycode", lambda: 8)
+
+    def broken_controller():
+        raise OSError("layout unavailable during Controller initialization")
+
+    monkeypatch.setattr(keyboard, "Controller", broken_controller)
+
+    send = selection_macos.copy_shortcut_sender()  # must not raise: Accessibility may still work
+    with pytest.raises(selection_macos.SelectionError, match="layout unavailable"):
+        send()
+
+
 def _fake_appkit(frontmost_pids):
     pids = iter(frontmost_pids)
     workspace = MagicMock()
