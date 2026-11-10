@@ -1,12 +1,26 @@
 from unittest.mock import MagicMock
 
+from PyQt6.QtMultimedia import QMediaPlayer
+
+from cracker.config.configuration import DEFAULT_SHORTCUTS
 from cracker.cracker import Cracker
 
 
-def test_set_action_connects_citation_reducer():
+def _cracker():
     cracker = object.__new__(Cracker)
     cracker.gui = MagicMock()
     cracker.key_manager = MagicMock()
+    cracker.selection_reader = MagicMock()
+    cracker.config = MagicMock(shortcuts=dict(DEFAULT_SHORTCUTS))
+    cracker.player = MagicMock()
+    cracker.speaker = MagicMock()
+    cracker.text_parser = MagicMock()
+    cracker._accessibility_trusted = MagicMock(return_value=False)
+    return cracker
+
+
+def test_set_action_connects_citation_reducer():
+    cracker = _cracker()
 
     cracker.set_action()
 
@@ -25,3 +39,68 @@ def test_change_speaker_reuses_one_backend_in_gui():
     cracker.get_speaker.assert_called_once_with("espeak", cracker.player)
     cracker.gui.change_speaker.assert_called_once_with("espeak", speaker)
     assert cracker.speaker is speaker
+
+
+def test_set_action_starts_both_global_shortcuts():
+    cracker = _cracker()
+
+    cracker.set_action()
+
+    cracker.key_manager.SelectionReadSignal.connect.assert_called_once_with(cracker.toggle_read_selection)
+    cracker.selection_reader.textReady.connect.assert_called_once_with(cracker._read_selection)
+    cracker.key_manager.start.assert_called_once()
+    args = cracker.key_manager.start.call_args.args
+    assert args[:2] == (["ctrl", "shift", "space"], ["f6"])
+
+
+def test_invalid_shortcut_falls_back_to_defaults():
+    cracker = _cracker()
+    cracker.config.shortcuts = {"read_clipboard": ["ctrl", "shift", "space"], "read_selection": ["nope"]}
+    cracker.key_manager.start.side_effect = [ValueError("Unknown key 'nope'"), None]
+
+    cracker._start_global_shortcuts()
+
+    assert cracker.key_manager.start.call_count == 2
+    assert cracker.key_manager.start.call_args.args[1] == ["f6"]
+    cracker.gui.show_notice.assert_called_once()
+
+
+def test_selection_shortcut_stops_playback_instead_of_reading():
+    cracker = _cracker()
+    cracker.player.playbackState.return_value = QMediaPlayer.PlaybackState.PlayingState
+
+    cracker.toggle_read_selection()
+
+    cracker.speaker.stop_text.assert_called_once()
+    cracker.player.stop.assert_called()
+    cracker.selection_reader.request.assert_not_called()
+
+
+def test_selection_shortcut_requests_selection_when_idle():
+    cracker = _cracker()
+    cracker.player.playbackState.return_value = QMediaPlayer.PlaybackState.StoppedState
+
+    cracker.toggle_read_selection()
+
+    cracker.selection_reader.request.assert_called_once()
+
+
+def test_empty_selection_shows_notice_and_reads_nothing():
+    cracker = _cracker()
+    cracker._read = MagicMock()
+
+    cracker._read_selection("   ")
+
+    cracker.gui.show_notice.assert_called_once_with("No selected text found.")
+    cracker._read.assert_not_called()
+
+
+def test_selection_text_is_reduced_and_read():
+    cracker = _cracker()
+    cracker._read = MagicMock()
+    cracker.text_parser.reduce_text.return_value = "clean text"
+
+    cracker._read_selection("raw text [1]")
+
+    cracker.gui.set_read_source.assert_called_once_with("clipboard", "clean text")
+    cracker._read.assert_called_once_with("clean text")

@@ -104,3 +104,18 @@ def test_save_user_config():
             }
         }
     )
+
+
+@patch("cracker.config.configuration.os.mkdir")
+@patch("cracker.config.configuration.os.path.isfile", return_value=False)
+@patch("cracker.config.configuration.os.path.isdir", return_value=False)
+def test_shortcuts_default_and_user_override(mock_isdir, mock_isfile, mock_mkdir):
+    config = Configuration()
+    raw = config.read_default_config()
+    assert raw["shortcuts"] == {"read_clipboard": ["ctrl", "shift", "space"], "read_selection": ["f6"]}
+
+    raw["shortcuts"] = {"read_selection": ["f7"]}
+    applied = config.apply_config(raw)
+
+    assert applied["shortcuts"] == {"read_clipboard": ["ctrl", "shift", "space"], "read_selection": ["f7"]}
+    assert config.shortcuts == applied["shortcuts"]

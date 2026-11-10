@@ -370,6 +370,11 @@ class MainWindow(QMainWindow):
     def editor_text(self) -> str:
         return self.textEdit.toPlainText()
 
+    def show_notice(self, message: str) -> None:
+        status = self.statusBar()
+        assert status is not None
+        status.showMessage(message, 8000)
+
     def set_read_source(self, source: str, text: str = "") -> None:
         """Set by the app controller before each read: 'textarea' or 'clipboard'."""
         if self.read_along is not None:

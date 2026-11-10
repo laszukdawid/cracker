@@ -1,7 +1,11 @@
+import importlib
+import sys
 import wave
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from pynput import keyboard
 from PyQt6.QtCore import QEventLoop, QTimer
 from PyQt6.QtMultimedia import QMediaPlayer
@@ -315,17 +319,54 @@ def test_refresh_theme_icons_rebuilds_control_icons(qt_app: QApplication, tmp_pa
     qt_app.processEvents()
 
 
+def _started_manager(listener, swallow=False):
+    manager = KeyBoardManager()
+    manager.start(["ctrl", "shift", "space"], ["f6"], swallow_selection=swallow)
+    clipboard, selection = [], []
+    manager.GlobalReadSignal.connect(lambda: clipboard.append(True))
+    manager.SelectionReadSignal.connect(lambda: selection.append(True))
+    return manager, clipboard, selection
+
+
 @patch("cracker.keylogger.keyboard.Listener")
 def test_global_shortcut_emits_after_full_sequence(listener):
-    manager = KeyBoardManager()
-    emitted = []
-    manager.GlobalReadSignal.connect(lambda: emitted.append(True))
-    manager.sequence = [keyboard.Key.ctrl, keyboard.Key.shift, keyboard.Key.space]
+    manager, clipboard, selection = _started_manager(listener)
 
-    for key in manager.sequence:
+    for key in (keyboard.Key.ctrl, keyboard.Key.shift, keyboard.Key.space):
         manager.on_press(key)
     manager.on_release(keyboard.Key.space)
 
-    assert emitted == [True]
+    assert clipboard == [True]
+    assert selection == []
     assert manager._pressed == set()
-    listener.assert_called_once()
+    listener.return_value.start.assert_called_once()
+    assert "darwin_intercept" not in listener.call_args.kwargs
+
+
+@patch("cracker.keylogger.keyboard.Listener")
+def test_selection_shortcut_emits_on_f6(listener):
+    manager, clipboard, selection = _started_manager(listener)
+
+    manager.on_press(keyboard.Key.f6)
+    manager.on_release(keyboard.Key.f6)
+
+    assert selection == [True]
+    assert clipboard == []
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS event tap")
+@patch("cracker.keylogger.keyboard.Listener")
+def test_selection_key_is_swallowed_on_macos(listener):
+    Quartz: Any = importlib.import_module("Quartz")
+
+    manager, _, _ = _started_manager(listener, swallow=True)
+    intercept = listener.call_args.kwargs["darwin_intercept"]
+
+    def key_event(vk, down):
+        return Quartz.CGEventCreateKeyboardEvent(None, vk, down)
+
+    f6_down, f6_up, a_down = key_event(0x61, True), key_event(0x61, False), key_event(0x00, True)
+    assert intercept(Quartz.kCGEventKeyDown, f6_down) is None
+    assert intercept(Quartz.kCGEventKeyUp, f6_up) is None
+    assert intercept(Quartz.kCGEventKeyDown, a_down) is a_down
+    assert intercept(Quartz.kCGEventKeyUp, f6_up) is f6_up  # no matching swallowed key-down

@@ -89,15 +89,28 @@ $ python -m cracker.main
 
 ## Key shortcuts
 
-There's only one global command (read from clipboard).
-All commands are expected to be called when Cracker is in focus.
+Two commands are global and work while another app is in front; the rest need Cracker in focus.
+Pressing a global shortcut while Cracker is reading stops it.
 
 | Action               | Shortcut            | Global |
 |----------------------|---------------------|--------|
 | Read (clipboard)     | Ctr + Shift + Space | Yes    |
+| Read (selected text) | F6                  | Yes    |
 | Read (text area)     | Ctr + Shift + R     | No     |
 | Pause / Resume read  | Ctr + Space         | No     |
 | Stop reading         | Ctr + Shift + S     | No     |
 | Reduce (all active)  | Ctr + R             | No     |
 | Reduce (wiki)        | Ctr + Shift + W     | No     |
 | Reduce (citation)    | Ctr + Shift + C     | No     |
+
+The global shortcuts can be changed in `~/.config/cracker/settings.yaml` using
+[pynput key names](https://pynput.readthedocs.io/en/latest/keyboard.html#pynput.keyboard.Key):
+
+```yaml
+shortcuts:
+  read_clipboard: [ctrl, shift, space]
+  read_selection: [f6]
+```
+
+On Linux, "selected text" is the X11/Wayland primary selection. On macOS, see the
+[macOS notes](docs/macos.md#reading-selected-text-f6).

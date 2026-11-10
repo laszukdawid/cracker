@@ -8,6 +8,11 @@ import yaml
 from cracker.speaker import LANGUAGES
 from cracker.utils import Singleton, deep_dict_merge, get_logger
 
+DEFAULT_SHORTCUTS: Dict[str, List[str]] = {
+    "read_clipboard": ["ctrl", "shift", "space"],
+    "read_selection": ["f6"],
+}
+
 
 class Configuration(Singleton):
     """Holds configuration values for the application."""
@@ -28,6 +33,8 @@ class Configuration(Singleton):
     voices: Dict[str, List[str]] = {}
     speed = 0
     credentials_file = {}
+
+    shortcuts: Dict[str, List[str]] = DEFAULT_SHORTCUTS
 
     regex_config = None
     raw_config: Dict | None = None
@@ -141,6 +148,8 @@ class Configuration(Singleton):
 
         if self.voice not in self.lang_voices:
             _config["voice"] = self.voice = self.lang_voices[0]
+
+        _config["shortcuts"] = self.shortcuts = {**DEFAULT_SHORTCUTS, **(configuration.get("shortcuts") or {})}
 
         self.regex_config = self.load_regex_config()
         return _config

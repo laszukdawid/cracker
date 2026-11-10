@@ -1,12 +1,14 @@
-from threading import Thread
+import sys
 
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import QApplication
 
 from cracker.audio_player import AudioPlayer
 from cracker.config import Configuration
+from cracker.config.configuration import DEFAULT_SHORTCUTS
 from cracker.cracker_gui import MainWindow
 from cracker.keylogger import KeyBoardManager
+from cracker.selection import SelectionReader
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
 from cracker.speaker.frogger import Frogger
@@ -42,6 +44,9 @@ class Cracker(object):
         self.gui.config_window.speaker = self.speaker
 
         self.key_manager = KeyBoardManager(self.app)
+        clipboard = self.app.clipboard()
+        assert clipboard is not None
+        self.selection_reader = SelectionReader(clipboard)
 
         # Event on closing GUI application
         self.gui.closeAppEvent.connect(self._close)
@@ -123,6 +128,41 @@ class Cracker(object):
             self.gui.set_read_source("clipboard", text)
             self._read(text)
 
+    def toggle_read_selection(self):
+        """Reads out the text selected in the frontmost app, or stops the current read."""
+        self._logger.debug("Reading selected text")
+        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+            self.stop_text()
+            self.player.stop()
+        else:
+            self.selection_reader.request()
+
+    def _read_selection(self, text: str):
+        if not text.strip():
+            self.gui.show_notice("No selected text found.")
+            return
+        self.stop_text()
+        self.text_parser.parser_rules = self.config.regex_config
+        text = self.text_parser.reduce_text(text)
+        self.gui.set_read_source("clipboard", text)
+        self._read(text)
+
+    def _start_global_shortcuts(self):
+        shortcuts = self.config.shortcuts
+        swallow = sys.platform == "darwin" and self._accessibility_trusted()
+        try:
+            self.key_manager.start(shortcuts["read_clipboard"], shortcuts["read_selection"], swallow)
+        except ValueError as exc:
+            self._logger.error("Invalid shortcut in config, using defaults: %s", exc)
+            self.gui.show_notice(f"Invalid shortcut in config, using defaults: {exc}")
+            self.key_manager.start(DEFAULT_SHORTCUTS["read_clipboard"], DEFAULT_SHORTCUTS["read_selection"], swallow)
+
+    @staticmethod
+    def _accessibility_trusted() -> bool:
+        from cracker import selection_macos
+
+        return selection_macos.is_trusted(prompt=False)
+
     def _read(self, text):
         self._logger.debug(f"Reading text: {text}")
         speaker_config = self._prepare_config()
@@ -161,7 +201,7 @@ class Cracker(object):
         self.gui.speakerW.currentTextChanged.connect(self.change_speaker)
 
         self.key_manager.GlobalReadSignal.connect(self.toggle_read_text_clipboard)
-
-        args = (["space", "ctrl", "shift"],)
-        p = Thread(target=self.key_manager.run, args=args)
-        p.start()
+        self.key_manager.SelectionReadSignal.connect(self.toggle_read_selection)
+        self.selection_reader.textReady.connect(self._read_selection)
+        self.selection_reader.failed.connect(self.gui.show_notice)
+        self._start_global_shortcuts()
