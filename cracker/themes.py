@@ -329,7 +329,7 @@ QLineEdit {
 }
 QLineEdit:focus { border-color: @accent@; }
 QLineEdit[mono="true"] {
-    font-family: "ui-monospace", "SF Mono", "Menlo", "Consolas", monospace;
+    font-family: "Menlo", "Consolas", "DejaVu Sans Mono", monospace;
     font-size: 11px;
 }
 QLabel[colhead="true"] {
