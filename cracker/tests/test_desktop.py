@@ -370,3 +370,28 @@ def test_selection_key_is_swallowed_on_macos(listener):
     assert intercept(Quartz.kCGEventKeyUp, f6_up) is None
     assert intercept(Quartz.kCGEventKeyDown, a_down) is a_down
     assert intercept(Quartz.kCGEventKeyUp, f6_up) is f6_up  # no matching swallowed key-down
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS event tap")
+@patch("cracker.keylogger.keyboard.Listener")
+def test_modified_selection_key_keeps_first_decision_through_repeats(listener):
+    Quartz: Any = importlib.import_module("Quartz")
+    manager = KeyBoardManager()
+    manager.start(["ctrl", "shift", "space"], ["ctrl", "f6"], swallow_selection=True)
+    intercept = listener.call_args.kwargs["darwin_intercept"]
+
+    def key_event(down, repeat=False):
+        event = Quartz.CGEventCreateKeyboardEvent(None, 0x61, down)
+        Quartz.CGEventSetIntegerValueField(event, Quartz.kCGKeyboardEventAutorepeat, int(repeat))
+        return event
+
+    plain_down, repeat, up = key_event(True), key_event(True, repeat=True), key_event(False)
+    assert intercept(Quartz.kCGEventKeyDown, plain_down) is plain_down  # Ctrl not held: F6 goes through
+    manager.on_press(keyboard.Key.ctrl)
+    assert intercept(Quartz.kCGEventKeyDown, repeat) is repeat  # Ctrl pressed mid-repeat: still goes through
+    assert intercept(Quartz.kCGEventKeyUp, up) is up
+
+    combo_down = key_event(True)
+    assert intercept(Quartz.kCGEventKeyDown, combo_down) is None
+    assert intercept(Quartz.kCGEventKeyDown, key_event(True, repeat=True)) is None
+    assert intercept(Quartz.kCGEventKeyUp, key_event(False)) is None

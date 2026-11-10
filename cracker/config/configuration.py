@@ -149,7 +149,12 @@ class Configuration(Singleton):
         if self.voice not in self.lang_voices:
             _config["voice"] = self.voice = self.lang_voices[0]
 
-        _config["shortcuts"] = self.shortcuts = {**DEFAULT_SHORTCUTS, **(configuration.get("shortcuts") or {})}
+        user_shortcuts = configuration.get("shortcuts") or {}
+        if not isinstance(user_shortcuts, dict):
+            # Each shortcut's keys are checked when the listener starts, which falls back to the defaults.
+            self._logger.warning("Ignoring 'shortcuts' in config: expected a mapping, got %r", user_shortcuts)
+            user_shortcuts = {}
+        _config["shortcuts"] = self.shortcuts = {**DEFAULT_SHORTCUTS, **user_shortcuts}
 
         self.regex_config = self.load_regex_config()
         return _config

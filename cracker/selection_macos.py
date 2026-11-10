@@ -28,16 +28,13 @@ def is_trusted(prompt: bool = False) -> bool:
     return bool(ax.AXIsProcessTrustedWithOptions({ax.kAXTrustedCheckOptionPrompt: prompt}))
 
 
-def selected_text_from_accessibility() -> str:
+def selected_text_from_accessibility(pid: int) -> str:
+    """Selected text of the focused element in the app with ``pid``, or "" if it doesn't expose one."""
     ax = _framework("ApplicationServices")
-    appkit = _framework("AppKit")
     # On the system-wide element this sets the timeout for every element, so a hung app can't stall us.
     ax.AXUIElementSetMessagingTimeout(ax.AXUIElementCreateSystemWide(), AX_TIMEOUT_S)
-    front = appkit.NSWorkspace.sharedWorkspace().frontmostApplication()
-    if front is None:
-        return ""
     # The system-wide element's focused element fails with kAXErrorCannotComplete on recent macOS.
-    app = ax.AXUIElementCreateApplication(front.processIdentifier())
+    app = ax.AXUIElementCreateApplication(pid)
     err, focused = ax.AXUIElementCopyAttributeValue(app, ax.kAXFocusedUIElementAttribute, None)
     if err != ax.kAXErrorSuccess or focused is None:
         return ""
@@ -64,28 +61,36 @@ def send_copy_shortcut() -> None:
         controller.tap(KeyCode.from_vk(vk))
 
 
+class SelectionError(Exception):
+    """A failure the user should see; the message is shown in the status bar."""
+
+
 def snapshot_pasteboard(pasteboard: Any) -> PasteboardSnapshot:
+    """Copy every item and format on the pasteboard, or raise if any can't be read back."""
     snapshot: PasteboardSnapshot = []
     for item in pasteboard.pasteboardItems() or []:
         data_by_type = {}
         for pb_type in item.types():
             data = item.dataForType_(pb_type)
-            if data is not None:
-                data_by_type[pb_type] = data
+            if data is None:
+                raise SelectionError("the clipboard holds data that can't be backed up, so it was left alone")
+            data_by_type[pb_type] = data
         snapshot.append(data_by_type)
     return snapshot
 
 
 def restore_pasteboard(pasteboard: Any, snapshot: PasteboardSnapshot, make_item: Callable[[], Any]) -> None:
-    pasteboard.clearContents()
+    # Build everything first so a failure can't leave the clipboard cleared.
     items = []
     for data_by_type in snapshot:
         item = make_item()
         for pb_type, data in data_by_type.items():
-            item.setData_forType_(data, pb_type)
+            if not item.setData_forType_(data, pb_type):
+                raise SelectionError("couldn't restore the previous clipboard")
         items.append(item)
-    if items:
-        pasteboard.writeObjects_(items)
+    pasteboard.clearContents()
+    if items and not pasteboard.writeObjects_(items):
+        raise SelectionError("couldn't restore the previous clipboard")
 
 
 def selected_text_from_copy(
@@ -97,33 +102,48 @@ def selected_text_from_copy(
     sleep: Callable[[float], None] = time.sleep,
     clock: Callable[[], float] = time.monotonic,
 ) -> str:
-    """Copy the selection via Cmd+C, read it, then restore the clipboard that was there before."""
+    """Copy the selection via Cmd+C, read it, then restore the clipboard that was there before.
+
+    A copy that lands after ``timeout`` can't be told apart from the user's own copy, so it isn't undone.
+    """
     before = pasteboard.changeCount()
     snapshot = snapshot_pasteboard(pasteboard)
-    send_copy()
+    if pasteboard.changeCount() != before:
+        raise SelectionError("the clipboard changed while it was being backed up; try again")
 
-    deadline = clock() + timeout
     text = None
-    while clock() < deadline:
+    try:
+        send_copy()
+        deadline = clock() + timeout
+        while clock() < deadline:
+            if pasteboard.changeCount() != before:
+                # Apps clear the pasteboard before writing, so wait for the string to land.
+                text = pasteboard.stringForType_(string_type)
+                if text is not None:
+                    break
+            sleep(POLL_INTERVAL_S)
+    finally:
         if pasteboard.changeCount() != before:
-            # Apps clear the pasteboard before writing, so wait for the string to land.
-            text = pasteboard.stringForType_(string_type)
-            if text is not None:
-                break
-        sleep(POLL_INTERVAL_S)
-
-    if pasteboard.changeCount() == before:
-        return ""  # Nothing was selected, or the app ignored Cmd+C; the clipboard is untouched.
-    restore_pasteboard(pasteboard, snapshot, make_item)
+            restore_pasteboard(pasteboard, snapshot, make_item)
     return str(text) if text else ""
 
 
 def get_selected_text() -> str:
-    text = selected_text_from_accessibility()
+    appkit = _framework("AppKit")
+    workspace = appkit.NSWorkspace.sharedWorkspace()
+    front = workspace.frontmostApplication()
+    if front is None:
+        return ""
+    pid = front.processIdentifier()
+
+    text = selected_text_from_accessibility(pid)
     if text.strip():
         return text
 
-    appkit = _framework("AppKit")
+    # Accessibility calls can take a while; don't send Cmd+C to an app the user has switched to.
+    current = workspace.frontmostApplication()
+    if current is None or current.processIdentifier() != pid:
+        raise SelectionError("the app in front changed before its selection could be copied")
     return selected_text_from_copy(
         pasteboard=appkit.NSPasteboard.generalPasteboard(),
         string_type=appkit.NSPasteboardTypeString,

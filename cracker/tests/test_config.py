@@ -119,3 +119,16 @@ def test_shortcuts_default_and_user_override(mock_isdir, mock_isfile, mock_mkdir
 
     assert applied["shortcuts"] == {"read_clipboard": ["ctrl", "shift", "space"], "read_selection": ["f7"]}
     assert config.shortcuts == applied["shortcuts"]
+
+
+@patch("cracker.config.configuration.os.mkdir")
+@patch("cracker.config.configuration.os.path.isfile", return_value=False)
+@patch("cracker.config.configuration.os.path.isdir", return_value=False)
+def test_non_mapping_shortcuts_fall_back_to_defaults(mock_isdir, mock_isfile, mock_mkdir):
+    config = Configuration()
+    raw = config.read_default_config()
+    raw["shortcuts"] = ["f6"]
+
+    applied = config.apply_config(raw)
+
+    assert applied["shortcuts"] == {"read_clipboard": ["ctrl", "shift", "space"], "read_selection": ["f6"]}

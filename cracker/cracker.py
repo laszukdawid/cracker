@@ -56,6 +56,7 @@ class Cracker(object):
     def _close(self):
         "Handles closing whole application"
         self.key_manager.stop()
+        self.selection_reader.shutdown()
 
     def get_speaker(self, speaker_name, player) -> AbstractSpeaker:
         config = self.config.read_config()
@@ -175,6 +176,7 @@ class Cracker(object):
             self.player.pause()
 
     def stop_text(self):
+        self.selection_reader.cancel()
         self.speaker.stop_text()
         self.player.stop()
 

@@ -19,11 +19,13 @@ MODIFIERS = {
 
 def parse_hotkey(names: Sequence[str]) -> frozenset:
     """Turn names such as ``["ctrl", "shift", "space"]`` or ``["f6"]`` into pynput keys."""
-    if isinstance(names, str) or not names:
+    if not isinstance(names, (list, tuple)) or not names:
         raise ValueError(f"Shortcut must be a non-empty list of key names, got {names!r}")
     keys = set()
     for name in names:
-        key_name = str(name).strip().lower()
+        if not isinstance(name, str):
+            raise ValueError(f"Key names must be strings, got {name!r} in shortcut {list(names)}")
+        key_name = name.strip().lower()
         if key_name not in keyboard.Key.__members__:
             raise ValueError(f"Unknown key {name!r} in shortcut {list(names)}")
         keys.add(keyboard.Key[key_name])
@@ -88,12 +90,18 @@ class KeyBoardManager(QObject):
             vk = quartz.CGEventGetIntegerValueField(event, quartz.kCGKeyboardEventKeycode)
             if vk not in trigger_vks:
                 return event
-            if event_type == quartz.kCGEventKeyDown and modifiers <= self._pressed:
-                self._swallowed_vks.add(vk)
-                return None
-            if event_type == quartz.kCGEventKeyUp and vk in self._swallowed_vks:
-                self._swallowed_vks.discard(vk)
-                return None
-            return event
+            if event_type == quartz.kCGEventKeyUp:
+                if vk in self._swallowed_vks:
+                    self._swallowed_vks.discard(vk)
+                    return None
+                return event
+            # Decide on the first key-down and keep that through auto-repeats, so the app in front
+            # never gets a key-down without its key-up (or the reverse).
+            if not quartz.CGEventGetIntegerValueField(event, quartz.kCGKeyboardEventAutorepeat):
+                if modifiers <= self._pressed:
+                    self._swallowed_vks.add(vk)
+                else:
+                    self._swallowed_vks.discard(vk)
+            return None if vk in self._swallowed_vks else event
 
         return intercept

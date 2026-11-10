@@ -21,6 +21,7 @@ class FakeItem:
 
     def setData_forType_(self, data, pb_type):
         self.data[pb_type] = data
+        return True
 
 
 class FakePasteboard:
@@ -46,6 +47,7 @@ class FakePasteboard:
 
     def writeObjects_(self, items):
         self.items = list(items)
+        return True
 
     def app_copies(self, text):
         self.clearContents()
@@ -119,12 +121,84 @@ def test_copy_of_non_text_returns_empty_and_restores():
     assert pasteboard.items[0].data == {STRING: "previous"}
 
 
+def test_copy_restores_clipboard_when_copy_raises():
+    pasteboard = FakePasteboard([FakeItem({STRING: "previous"})])
+
+    def copy_then_fail():
+        pasteboard.app_copies("selected")
+        raise RuntimeError("event post failed")
+
+    with pytest.raises(RuntimeError):
+        _copy(pasteboard, copy_then_fail)
+
+    assert pasteboard.items[0].data == {STRING: "previous"}
+
+
+def test_copy_refuses_when_clipboard_cannot_be_backed_up():
+    class PromisedItem(FakeItem):
+        def dataForType_(self, pb_type):
+            return None
+
+    pasteboard = FakePasteboard([PromisedItem({"com.apple.promise": b""})])
+    send_copy = MagicMock()
+
+    with pytest.raises(selection_macos.SelectionError):
+        _copy(pasteboard, send_copy)
+
+    send_copy.assert_not_called()
+
+
+def test_restore_failure_leaves_clipboard_uncleared():
+    class BrokenItem(FakeItem):
+        def setData_forType_(self, data, pb_type):
+            return False
+
+    pasteboard = FakePasteboard([FakeItem({STRING: "selected"})])
+    before = pasteboard.count
+
+    with pytest.raises(selection_macos.SelectionError):
+        selection_macos.restore_pasteboard(pasteboard, [{STRING: "previous"}], make_item=BrokenItem)
+
+    assert pasteboard.count == before
+    assert pasteboard.items[0].data == {STRING: "selected"}
+
+
+class FakeApp:
+    def __init__(self, pid):
+        self.pid = pid
+
+    def processIdentifier(self):
+        return self.pid
+
+
+def _fake_appkit(frontmost_pids):
+    pids = iter(frontmost_pids)
+    workspace = MagicMock()
+    workspace.frontmostApplication.side_effect = lambda: FakeApp(next(pids))
+    appkit = MagicMock()
+    appkit.NSWorkspace.sharedWorkspace.return_value = workspace
+    return appkit
+
+
 def test_get_selected_text_prefers_accessibility(monkeypatch):
-    monkeypatch.setattr(selection_macos, "selected_text_from_accessibility", lambda: "from ax")
+    monkeypatch.setattr(selection_macos, "_framework", lambda name: _fake_appkit([42]))
+    monkeypatch.setattr(selection_macos, "selected_text_from_accessibility", lambda pid: f"from ax {pid}")
     copy = MagicMock()
     monkeypatch.setattr(selection_macos, "selected_text_from_copy", copy)
 
-    assert selection_macos.get_selected_text() == "from ax"
+    assert selection_macos.get_selected_text() == "from ax 42"
+    copy.assert_not_called()
+
+
+def test_get_selected_text_does_not_copy_after_focus_change(monkeypatch):
+    monkeypatch.setattr(selection_macos, "_framework", lambda name: _fake_appkit([42, 7]))
+    monkeypatch.setattr(selection_macos, "selected_text_from_accessibility", lambda pid: "")
+    copy = MagicMock()
+    monkeypatch.setattr(selection_macos, "selected_text_from_copy", copy)
+
+    with pytest.raises(selection_macos.SelectionError):
+        selection_macos.get_selected_text()
+
     copy.assert_not_called()
 
 
@@ -180,6 +254,63 @@ def test_reader_reports_fetch_errors_and_recovers():
     assert texts == ["second"]
 
 
+def test_reader_drops_result_cancelled_by_stop():
+    pending = []
+    reader = SelectionReader(
+        MagicMock(),
+        platform="darwin",
+        fetch=lambda: "late text",
+        is_trusted=lambda prompt: True,
+        start_thread=pending.append,
+    )
+    texts = []
+    reader.textReady.connect(texts.append)
+
+    reader.request()
+    reader.cancel()
+    pending[0]()
+
+    assert texts == []
+
+
+def test_reader_reports_permission_check_errors():
+    def broken_check(prompt):
+        raise OSError("no AX")
+
+    reader = SelectionReader(MagicMock(), platform="darwin", is_trusted=broken_check)
+    failures = []
+    reader.failed.connect(failures.append)
+
+    reader.request()
+
+    assert failures == ["Couldn't read the selected text: no AX"]
+
+
+def test_reader_reports_thread_start_errors_and_unlocks():
+    def no_threads(target):
+        raise RuntimeError("can't start thread")
+
+    reader = SelectionReader(MagicMock(), platform="darwin", is_trusted=lambda prompt: True, start_thread=no_threads)
+    failures = []
+    reader.failed.connect(failures.append)
+
+    reader.request()
+
+    assert failures == ["Couldn't read the selected text: can't start thread"]
+    assert reader._busy.acquire(blocking=False)
+
+
+def test_reader_ignores_requests_after_shutdown():
+    fetch = MagicMock(return_value="text")
+    reader, texts, failures = _reader(fetch=fetch)
+
+    reader.shutdown()
+    reader.request()
+
+    fetch.assert_not_called()
+    assert texts == failures == []
+
+
 def test_reader_ignores_request_while_busy():
     pending = []
     reader = SelectionReader(
@@ -219,7 +350,7 @@ def test_reader_reports_unsupported_platform():
     assert len(failures) == 1
 
 
-@pytest.mark.parametrize("names", [[], "f6", ["f6", "nope"]])
+@pytest.mark.parametrize("names", [[], "f6", ["f6", "nope"], 5, [5], None])
 def test_parse_hotkey_rejects_bad_names(names):
     from cracker.keylogger import parse_hotkey
 
