@@ -96,11 +96,9 @@ def prepare_restore_items(snapshot: PasteboardSnapshot, make_item: Callable[[], 
 
 
 def restore_pasteboard(pasteboard: Any, items: list[Any]) -> None:
-    for _ in range(2):
-        pasteboard.clearContents()
-        if not items or pasteboard.writeObjects_(items):
-            return
-    raise SelectionError("couldn't restore the previous clipboard")
+    pasteboard.clearContents()
+    if items and not pasteboard.writeObjects_(items):
+        raise SelectionError("couldn't restore the previous clipboard")
 
 
 def selected_text_from_copy(

@@ -163,15 +163,15 @@ def test_unbuildable_backup_aborts_before_copy():
     assert pasteboard.items[0].data == {STRING: "previous"}
 
 
-def test_restore_retries_a_failed_write():
+def test_restore_writes_the_backed_up_items():
     pasteboard = FakePasteboard([FakeItem({STRING: "selected"})])
-    results = iter([False, True])
-    pasteboard.writeObjects_ = lambda items: next(results)
 
-    selection_macos.restore_pasteboard(pasteboard, [FakeItem({STRING: "previous"})])
+    selection_macos.restore_pasteboard(pasteboard, [FakeItem({STRING: "previous", "public.rtf": b"rtf"})])
+
+    assert [item.data for item in pasteboard.items] == [{STRING: "previous", "public.rtf": b"rtf"}]
 
 
-def test_restore_reports_repeated_write_failure():
+def test_restore_reports_write_failure():
     pasteboard = FakePasteboard([FakeItem({STRING: "selected"})])
     pasteboard.writeObjects_ = lambda items: False
 
