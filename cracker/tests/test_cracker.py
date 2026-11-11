@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from unittest.mock import MagicMock, patch
@@ -104,6 +105,48 @@ def test_global_shortcuts_do_not_start_after_close():
     cracker._start_global_shortcuts()
 
     cracker._make_key_manager.assert_not_called()
+
+
+def test_shortcut_backend_failure_is_reported_not_raised():
+    cracker = _cracker()
+    cracker.key_manager = None
+    cracker._make_key_manager = MagicMock(side_effect=ImportError("no keyboard backend"))
+
+    cracker._start_global_shortcuts()
+
+    cracker.gui.show_notice.assert_called_once_with("Global shortcuts are unavailable: no keyboard backend")
+
+
+def test_shortcut_start_failure_stops_the_listener():
+    cracker = _cracker()
+    cracker.key_manager.start.side_effect = OSError("event tap refused")
+
+    cracker._start_global_shortcuts()
+
+    cracker.key_manager.stop.assert_called_once()
+    cracker.gui.show_notice.assert_called_once_with("Global shortcuts are unavailable: event tap refused")
+
+
+def test_shortcut_failure_in_the_event_loop_keeps_the_app_running():
+    code = """
+import sys
+from unittest.mock import MagicMock
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication
+from cracker.cracker import Cracker
+
+app = QApplication([])
+cracker = object.__new__(Cracker)
+cracker._closed = False
+cracker.key_manager = None
+cracker.gui = MagicMock()
+cracker._make_key_manager = MagicMock(side_effect=ImportError("no keyboard backend"))
+QTimer.singleShot(0, cracker._start_global_shortcuts)
+QTimer.singleShot(50, lambda: app.exit(0 if cracker.gui.show_notice.called else 3))
+sys.exit(app.exec())
+"""
+    env = {**os.environ, "QT_QPA_PLATFORM": os.environ.get("QT_QPA_PLATFORM", "offscreen")}
+    assert subprocess.run([sys.executable, "-c", code], env=env, timeout=30).returncode == 0
 
 
 def test_importing_cracker_does_not_load_pynput():
