@@ -4,8 +4,7 @@ import uuid
 from concurrent.futures import CancelledError, ThreadPoolExecutor
 from typing import List
 
-import boto3
-from botocore.config import Config
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QMessageBox
 
 from cracker.config import Configuration
@@ -30,7 +29,7 @@ CONNECTION_HELP = (
 
 # botocore defaults to 60 s timeouts and 4 attempts. Quitting waits for requests in flight, so keep
 # them short: a 3,000-character synthesis takes about 1.3 s. Worst case here is 2 x (5 + 15) s.
-CLIENT_CONFIG = Config(connect_timeout=5, read_timeout=15, retries={"total_max_attempts": 2, "mode": "standard"})
+CLIENT_OPTIONS = {"connect_timeout": 5, "read_timeout": 15, "retries": {"total_max_attempts": 2, "mode": "standard"}}
 
 
 class Polly(AbstractSpeaker):
@@ -55,16 +54,13 @@ class Polly(AbstractSpeaker):
         aws_profile = polly_config["profile_name"]
         aws_region = polly_config.get("region_name", None)
         self._logger.debug("Using AWS profile: %s, region: %s", aws_profile, aws_region)
-        try:
-            self.client = self._connect_aws(aws_profile, aws_region)
-            self._warm_up()
-        except Exception as e:
-            self._logger.error("Error connecting to AWS: %s", e)
-            self._connection_error = str(e)
+        self._pending_connection: tuple[str | None, str | None] | None = (aws_profile, aws_region)
 
         self.player = player
         self._queue = SpeechQueue(player, self._show_synthesis_error)
         self._marks_executor: ThreadPoolExecutor | None = None
+        # Importing boto3 and building the client take ~150 ms, so connect once the window is up.
+        QTimer.singleShot(0, self._ensure_client)
 
     def __del__(self):
         try:
@@ -92,6 +88,19 @@ class Polly(AbstractSpeaker):
         self._cached_segments = []
         self._cached_voice = ""
 
+    def _ensure_client(self) -> None:
+        """Connects on first use; ``read_text`` calls it in case the deferred connect hasn't run yet."""
+        pending = getattr(self, "_pending_connection", None)
+        if pending is None or getattr(self, "_shut_down", False):
+            return
+        self._pending_connection = None
+        try:
+            self.client = self._connect_aws(*pending)
+            self._warm_up()
+        except Exception as e:
+            self._logger.error("Error connecting to AWS: %s", e)
+            self._connection_error = str(e)
+
     def _warm_up(self) -> None:
         """Resolve credentials and open a connection in the background, so the first read starts sooner.
 
@@ -112,9 +121,12 @@ class Polly(AbstractSpeaker):
     @staticmethod
     def _connect_aws(profile_name: str | None = None, region_name: str | None = None):
         """Connect to AWS and create Polly client"""
+        import boto3
+        from botocore.config import Config
+
         try:
             session = boto3.Session(profile_name=profile_name, region_name=region_name)
-            return session.client("polly", config=CLIENT_CONFIG)
+            return session.client("polly", config=Config(**CLIENT_OPTIONS))
         except Exception as e:
             Polly._logger.exception(
                 "Unable to connect to AWS with the profile '%s' and region '%s'. "
@@ -132,6 +144,7 @@ class Polly(AbstractSpeaker):
         aws_region = polly_config.get("region_name", None)
 
         self._logger.debug("Reloading with AWS profile: %s, region: %s", aws_profile, aws_region)
+        self._pending_connection = None  # the deferred connect would replace this client
 
         try:
             self.client = self._connect_aws(aws_profile, aws_region)
@@ -224,6 +237,7 @@ class Polly(AbstractSpeaker):
             self.player.play_segments(self._cached_segments)
             return
 
+        self._ensure_client()
         if self.client is None or self._connection_error:
             self._logger.error("Attempted to use Polly without valid AWS connection")
             self._show_error_dialog(CONNECTION_HELP, f"Error details: {self._connection_error}")

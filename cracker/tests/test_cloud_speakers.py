@@ -1,19 +1,79 @@
 from unittest.mock import MagicMock, patch
 
 from cracker.speaker.google import Google
-from cracker.speaker.polly import CLIENT_CONFIG, Polly
+from cracker.speaker.polly import Polly
 
 
 def test_polly_connects_with_configured_profile_and_region():
     client = MagicMock()
 
-    with patch("cracker.speaker.polly.boto3.Session") as session:
+    with patch("boto3.Session") as session:
         session.return_value.client.return_value = client
         result = Polly._connect_aws("work", "us-west-2")
 
     session.assert_called_once_with(profile_name="work", region_name="us-west-2")
-    session.return_value.client.assert_called_once_with("polly", config=CLIENT_CONFIG)
+    assert session.return_value.client.call_args.args == ("polly",)
+    config = session.return_value.client.call_args.kwargs["config"]
+    assert (config.connect_timeout, config.read_timeout) == (5, 15)
+    assert config.retries == {"total_max_attempts": 2, "mode": "standard"}
     assert result is client
+
+
+def _fake_polly_config(monkeypatch):
+    config = MagicMock()
+    config.read_config.return_value = {"polly": {"profile_name": "work", "region_name": "us-west-2"}}
+    monkeypatch.setattr("cracker.speaker.polly.Configuration", lambda: config)
+
+
+def test_polly_connects_after_construction_not_during_it(monkeypatch):
+    connect = MagicMock()
+    monkeypatch.setattr(Polly, "_connect_aws", staticmethod(connect))
+    monkeypatch.setattr(Polly, "_warm_up", lambda self: None)
+    _fake_polly_config(monkeypatch)
+    with patch("cracker.speaker.polly.QTimer.singleShot") as single_shot:
+        polly = Polly(MagicMock())
+
+    connect.assert_not_called()
+    single_shot.assert_called_once_with(0, polly._ensure_client)
+    polly._ensure_client()
+    polly._ensure_client()
+    connect.assert_called_once_with("work", "us-west-2")
+    assert polly.client is connect.return_value
+
+
+def test_polly_read_connects_if_the_deferred_connect_has_not_run(tmp_path, monkeypatch):
+    polly = _polly(tmp_path, monkeypatch)
+    polly.client = None
+    polly._pending_connection = ("work", None)
+    client = MagicMock()
+    monkeypatch.setattr(Polly, "_connect_aws", staticmethod(lambda *args: client))
+    monkeypatch.setattr(Polly, "_warm_up", lambda self: None)
+
+    polly.read_text("hello", rate="medium", volume="medium", voice="Joanna")
+
+    assert polly.client is client
+    polly._queue.start.assert_called_once()
+
+
+def test_polly_does_not_connect_after_shutdown(monkeypatch):
+    connect = MagicMock()
+    monkeypatch.setattr(Polly, "_connect_aws", staticmethod(connect))
+    _fake_polly_config(monkeypatch)
+    with patch("cracker.speaker.polly.QTimer.singleShot"):
+        polly = Polly(MagicMock())
+
+    polly.shutdown()
+    polly._ensure_client()
+
+    connect.assert_not_called()
+
+
+def test_importing_polly_does_not_load_boto3():
+    import subprocess
+    import sys
+
+    code = "import sys, cracker.speaker.polly; sys.exit('boto3' in sys.modules or 'botocore' in sys.modules)"
+    assert subprocess.run([sys.executable, "-c", code]).returncode == 0
 
 
 def test_polly_builds_expected_synthesis_request():

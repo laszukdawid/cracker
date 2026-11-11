@@ -1,5 +1,7 @@
 import sys
+from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QTimer
 from PyQt6.QtMultimedia import QMediaPlayer
 from PyQt6.QtWidgets import QApplication
 
@@ -7,7 +9,6 @@ from cracker.audio_player import AudioPlayer
 from cracker.config import Configuration
 from cracker.config.configuration import DEFAULT_SHORTCUTS
 from cracker.cracker_gui import MainWindow
-from cracker.keylogger import KeyBoardManager
 from cracker.selection import SelectionReader
 from cracker.speaker.abstract_speaker import AbstractSpeaker
 from cracker.speaker.espeak import Espeak
@@ -16,6 +17,9 @@ from cracker.speaker.google import Google
 from cracker.speaker.polly import Polly
 from cracker.text_parser import TextParser
 from cracker.utils import get_logger
+
+if TYPE_CHECKING:
+    from cracker.keylogger import KeyBoardManager
 
 
 class Cracker(object):
@@ -43,7 +47,9 @@ class Cracker(object):
         # Pass speaker reference to config window
         self.gui.config_window.speaker = self.speaker
 
-        self.key_manager = KeyBoardManager(self.app)
+        # Created after the window shows: importing pynput loads AppKit and Quartz (~250 ms).
+        self.key_manager: KeyBoardManager | None = None
+        self._closed = False
         clipboard = self.app.clipboard()
         assert clipboard is not None
         self.selection_reader = SelectionReader(clipboard)
@@ -55,7 +61,9 @@ class Cracker(object):
 
     def _close(self):
         "Handles closing whole application"
-        self.key_manager.stop()
+        self._closed = True
+        if self.key_manager is not None:
+            self.key_manager.stop()
         self.selection_reader.shutdown()
         self.speaker.shutdown()  # cancels synthesis and removes this session's audio files
 
@@ -154,16 +162,29 @@ class Cracker(object):
         self._read(text)
 
     def _start_global_shortcuts(self):
+        if self._closed:
+            return
+        if self.key_manager is None:
+            self.key_manager = self._make_key_manager()
+        manager = self.key_manager
         if self.config.shortcut_warning:
             self.gui.show_notice(self.config.shortcut_warning)
         shortcuts = self.config.shortcuts
         swallow = sys.platform == "darwin" and self._accessibility_trusted()
         try:
-            self.key_manager.start(shortcuts["read_clipboard"], shortcuts["read_selection"], swallow)
+            manager.start(shortcuts["read_clipboard"], shortcuts["read_selection"], swallow)
         except ValueError as exc:
             self._logger.error("Invalid shortcut in config, using defaults: %s", exc)
             self.gui.show_notice(f"Invalid shortcut in config, using defaults: {exc}")
-            self.key_manager.start(DEFAULT_SHORTCUTS["read_clipboard"], DEFAULT_SHORTCUTS["read_selection"], swallow)
+            manager.start(DEFAULT_SHORTCUTS["read_clipboard"], DEFAULT_SHORTCUTS["read_selection"], swallow)
+
+    def _make_key_manager(self) -> "KeyBoardManager":
+        from cracker.keylogger import KeyBoardManager
+
+        manager = KeyBoardManager(self.app)
+        manager.GlobalReadSignal.connect(self.toggle_read_text_clipboard)
+        manager.SelectionReadSignal.connect(self.toggle_read_selection)
+        return manager
 
     @staticmethod
     def _accessibility_trusted() -> bool:
@@ -220,8 +241,7 @@ class Cracker(object):
         self.gui.cite_action.triggered.connect(self.reduce_cite)
         self.gui.speakerW.currentTextChanged.connect(self.change_speaker)
 
-        self.key_manager.GlobalReadSignal.connect(self.toggle_read_text_clipboard)
-        self.key_manager.SelectionReadSignal.connect(self.toggle_read_selection)
         self.selection_reader.textReady.connect(self._read_selection)
         self.selection_reader.failed.connect(self.gui.show_notice)
-        self._start_global_shortcuts()
+        # Runs once the event loop starts, so the window appears before pynput loads.
+        QTimer.singleShot(0, self._start_global_shortcuts)
