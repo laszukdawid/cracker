@@ -164,6 +164,16 @@ class Cracker(object):
     def _start_global_shortcuts(self):
         if self._closed:
             return
+        try:
+            self._listen_for_global_shortcuts()
+        except Exception as exc:
+            # Runs from a Qt timer, where an uncaught exception aborts the whole app.
+            self._logger.exception("Global shortcuts are unavailable")
+            if self.key_manager is not None:
+                self.key_manager.stop()
+            self.gui.show_notice(f"Global shortcuts are unavailable: {exc}")
+
+    def _listen_for_global_shortcuts(self):
         if self.key_manager is None:
             self.key_manager = self._make_key_manager()
         manager = self.key_manager
