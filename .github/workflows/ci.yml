@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-26.04, macos-latest]
 
     steps:
       - uses: actions/checkout@v7
@@ -47,7 +47,7 @@ jobs:
         run: uv run --frozen pytest
 
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -63,7 +63,7 @@ jobs:
       - run: uv run --frozen python -m compileall -q cracker
 
   package:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
