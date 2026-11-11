@@ -1,4 +1,6 @@
-from unittest.mock import MagicMock
+import subprocess
+import sys
+from unittest.mock import MagicMock, patch
 
 from PyQt6.QtMultimedia import QMediaPlayer
 
@@ -10,6 +12,7 @@ def _cracker():
     cracker = object.__new__(Cracker)
     cracker.gui = MagicMock()
     cracker.key_manager = MagicMock()
+    cracker._closed = False
     cracker.selection_reader = MagicMock()
     cracker.config = MagicMock(shortcuts=dict(DEFAULT_SHORTCUTS), shortcut_warning=None)
     cracker.player = MagicMock(waiting_for_segment=False)
@@ -56,16 +59,56 @@ def test_change_speaker_saves_pending_settings_before_reloading_config():
     assert [c[0] for c in calls.mock_calls[:3]] == ["gui.flush_pending_save", "old_speaker.shutdown", "get_speaker"]
 
 
-def test_set_action_starts_both_global_shortcuts():
+def test_set_action_starts_global_shortcuts_once_the_event_loop_runs():
     cracker = _cracker()
 
-    cracker.set_action()
+    with patch("cracker.cracker.QTimer.singleShot") as single_shot:
+        cracker.set_action()
 
-    cracker.key_manager.SelectionReadSignal.connect.assert_called_once_with(cracker.toggle_read_selection)
+    cracker.key_manager.start.assert_not_called()  # the window shows first
+    single_shot.assert_called_once_with(0, cracker._start_global_shortcuts)
     cracker.selection_reader.textReady.connect.assert_called_once_with(cracker._read_selection)
+
+
+def test_start_global_shortcuts_listens_for_both():
+    cracker = _cracker()
+
+    cracker._start_global_shortcuts()
+
     cracker.key_manager.start.assert_called_once()
     args = cracker.key_manager.start.call_args.args
     assert args[:2] == (["ctrl", "shift", "space"], ["f6"])
+
+
+def test_key_manager_is_created_and_connected_on_first_start():
+    cracker = _cracker()
+    cracker.key_manager = None
+    cracker.app = None
+
+    with patch("cracker.keylogger.KeyBoardManager") as manager_class:
+        cracker._start_global_shortcuts()
+
+    manager = manager_class.return_value
+    assert cracker.key_manager is manager
+    manager.GlobalReadSignal.connect.assert_called_once_with(cracker.toggle_read_text_clipboard)
+    manager.SelectionReadSignal.connect.assert_called_once_with(cracker.toggle_read_selection)
+    manager.start.assert_called_once()
+
+
+def test_global_shortcuts_do_not_start_after_close():
+    cracker = _cracker()
+    cracker.key_manager = None
+    cracker._make_key_manager = MagicMock()
+
+    cracker._close()
+    cracker._start_global_shortcuts()
+
+    cracker._make_key_manager.assert_not_called()
+
+
+def test_importing_cracker_does_not_load_pynput():
+    code = "import sys, cracker.cracker; sys.exit('pynput' in sys.modules)"
+    assert subprocess.run([sys.executable, "-c", code]).returncode == 0
 
 
 def test_invalid_shortcut_falls_back_to_defaults():
