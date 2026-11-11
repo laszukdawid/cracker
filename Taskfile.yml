@@ -1,0 +1,82 @@
+version: "3"
+
+vars:
+  SOURCE_PATHS: cracker scripts
+
+tasks:
+  default:
+    desc: List the available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  install:
+    desc: Install runtime dependencies
+    cmds:
+      - uv sync
+
+  install-all:
+    desc: Install runtime, dev, test and build dependencies
+    cmds:
+      - uv sync --all-extras
+
+  run:
+    desc: "Start Cracker; pass options after --, e.g. task run -- --debug"
+    cmds:
+      - uv run cracker {{.CLI_ARGS}}
+
+  test:
+    desc: Run the test suite
+    cmds:
+      - uv run --extra test pytest -v {{.CLI_ARGS}}
+
+  format:
+    desc: Fix lint issues and format the code
+    aliases: [format-code]
+    cmds:
+      - uv run --extra dev ruff check --fix {{.SOURCE_PATHS}}
+      - uv run --extra dev ruff format {{.SOURCE_PATHS}}
+
+  format-check:
+    desc: Check lint and formatting without changing files
+    cmds:
+      - uv run --extra dev ruff check {{.SOURCE_PATHS}}
+      - uv run --extra dev ruff format --check {{.SOURCE_PATHS}}
+
+  typecheck:
+    desc: Type-check for this platform and for Linux
+    cmds:
+      - uv run --extra dev ty check
+      - uv run --extra dev ty check --python-platform linux
+
+  build:
+    desc: Build the sdist and wheel, then check the wheel's contents
+    cmds:
+      - uv build
+      - uv run python scripts/check_wheel.py
+
+  check:
+    desc: Everything to run before a pull request (lint, types, tests, build)
+    cmds:
+      - task: format-check
+      - task: typecheck
+      - task: test
+      - task: build
+
+  upgrade:
+    desc: Upgrade locked dependencies within their constraints
+    cmds:
+      - uv lock --upgrade
+
+  publish:
+    desc: Upload the built packages in dist/ to PyPI
+    prompt: Upload dist/* to PyPI?
+    cmds:
+      - uv run --extra build twine upload -r cracker dist/*
+
+  clean:
+    desc: Remove build output and caches
+    cmds:
+      - find cracker -name "*.pyc" -delete
+      - find cracker -name "__pycache__" -prune -exec rm -r {} +
+      - rm -rf cracker.egg-info build dist

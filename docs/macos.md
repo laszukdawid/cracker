@@ -4,7 +4,7 @@ PyQt6 publishes binary wheels for Intel and Apple Silicon macOS. No Homebrew Qt 
 
 ```shell
 uv sync --all-extras
-make run
+task run
 ```
 
 ## Global shortcut permission

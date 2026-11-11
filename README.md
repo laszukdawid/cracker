@@ -45,17 +45,19 @@ See [Usage](#usage) section below.
 
 ### Development
 
-Development requires Python 3.14. The project uses [uv](https://docs.astral.sh/uv/) for dependency management and reproducible environments:
+Development requires Python 3.14. The project uses [uv](https://docs.astral.sh/uv/) for dependency management and
+reproducible environments, and [Task](https://taskfile.dev/installation/) (`brew install go-task`) to run common commands:
 
 ```shell
-uv sync --all-extras
-make test
-make format-check
-make typecheck
-make build
+task install-all
+task test
+task format-check
+task typecheck
+task build
 ```
 
-Run `make check` before opening a pull request to execute Ruff checks, ty type checking, tests, and a package build.
+Run `task check` before opening a pull request to execute Ruff checks, ty type checking, tests, and a package build.
+`task` on its own lists every task.
 See [Dependency policy](docs/dependencies.md) for version constraints and update procedures.
 
 *PyQt6* is used for the desktop GUI and multimedia playback. Its binary wheels include the corresponding Qt
@@ -83,8 +85,8 @@ Cloud backends download audio to Cracker's cache and play it through Qt Multimed
 Start it with the `cracker` command after `pip install cracker`, or from a checkout:
 
 ```shell
-make run        # same as: uv run cracker
-uv run cracker --debug
+task run             # same as: uv run cracker
+task run -- --debug  # same as: uv run cracker --debug
 ```
 
 ## Key shortcuts

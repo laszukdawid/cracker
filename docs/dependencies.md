@@ -17,7 +17,7 @@ For a manual update:
 
 ```shell
 uv lock --upgrade-package <package>
-make check
+task check
 ```
 
 Commit `pyproject.toml` and `uv.lock` together whenever dependency constraints change. Commit only `uv.lock` when refreshing a compatible transitive or directly declared version without changing policy.
@@ -27,7 +27,7 @@ Commit `pyproject.toml` and `uv.lock` together whenever dependency constraints c
 Every dependency update must pass:
 
 ```shell
-make check
+task check
 ```
 
 Cloud backend changes should retain mocked request and credential tests. Desktop dependency changes must pass the Linux and macOS CI jobs.
